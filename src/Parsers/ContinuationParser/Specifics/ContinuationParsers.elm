@@ -1,30 +1,21 @@
 {-
-Copyright info at end of file
--}
-module Parsers.ContinuationParser.VariousParsersAndLexemeEaters where
-import String
-import Char
 
+This module provides generally usefull ContinuationParsers
+
+Copyright info at end of file
+
+-}
+module Parsers.ContinuationParser.Specifics.ContinuationParsers where
+
+{- Base libraries -}
+import String
+
+{- Internal modules -}
 import open Parsers.CharacterClassification
 import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
 import open Parsers.ContinuationParser.PositionMarking
-
---positionMarkedCharset: (char -> Bool) -> LexemeEater (PositionMarked char) char [char]
-positionMarkedCharset test = handlePositionMarkedInput <| charset test
-
---whitespace: LexemeEater (PositionMarked Char) Char [Char]
-whitespace = positionMarkedCharset isWhitespace
-
---comment: LexemeEater (PositionMarked Char) Char [Char]
-comment = positionMarkedCharset (\c->c/='\n')
-
---number: LexemeEater (PositionMarked Char) Char Float
-number = handlePositionMarkedInput <| lexemeMaybe (\c->Char.isDigit c||c=='.') (String.toFloat . String.fromList)
-
---symbol: (Char -> Bool) -> LexemeEater (PositionMarked Char) Char String
-symbol punctuationTest = handlePositionMarkedInput (symbol' punctuationTest)
-symbol' punctuationTest = lexeme (not . punctuationTest) String.fromList
+import open Parsers.ContinuationParser.Specifics.Lexemes
 
 --takeString: ContinuationParser (PositionMarked Char) String () output
 takeString continuation = takeString' [] continuation `markEndOfInputAsErrorAt` "Matching quote not found for string."
@@ -38,20 +29,6 @@ takeString' acc continuation input =
        <| \ escaped _ -> fastforward 1 <| takeString' (acc++ segment ++ [escaped]) continuation
 
       | transition == '\"' -> fastforward 1 <| continuation (String.fromList <| acc ++ segment) ())
-
-normalStringSegment: LexemeEater (PositionMarked Char) Char [Char]
-normalStringSegment = positionMarkedCharset (\c-> c/='\"' && c/= '\\')
-
---escapedChar: LexemeEater (PositionMarked Char) () Char
-escapedChar acc input =
- let
-  output =
-   if | input.char == 't' -> '\t'
-      | input.char == 'n' -> '\n'
-      | input.char == 'r' -> '\r'
-      | input.char == '0' -> '\0'
-      | otherwise -> input.char
- in EatenLexeme {lexeme=output,transition=()}
 
 {-
 The continuation parser

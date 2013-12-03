@@ -10,7 +10,8 @@ module Parsers.ContinuationParser.Examples.LispyListParser where
 import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.LexemeEaters
-import open Parsers.ContinuationParser.VariousParsersAndLexemeEaters
+import open Parsers.ContinuationParser.Specifics.Lexemes
+import open Parsers.ContinuationParser.Specifics.ContinuationParsers
 import open Parsers.CharacterClassification
 
 import Char
@@ -80,7 +81,7 @@ takeLispyList' acc closeParenError continuation input =
        <| continuation (List acc) ()
 
       | Char.isDigit transition ->
-          take number
+          take float
        <| \ number' _ -> takeLispyList' (acc++[Number number']) closeParenError continuation
 
       | otherwise -> take
