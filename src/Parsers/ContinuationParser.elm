@@ -5,12 +5,12 @@ For copyright information see the COPYING file or the end of this file.
 -}
 module Parsers.ContinuationParser where
 
+type Parser input output = [input] -> ParserResult output
+
 data ParserResult output
  = Parsed output
  | ParseError String
  | EndOfInputBeforeResultReached
-
-type Parser input output = [input] -> ParserResult output
 
 type Continuation input intermediate opinion output = intermediate -> opinion -> Parser input output
 
@@ -41,6 +41,23 @@ fastforward n parser input =
         (i::is) -> fastforward (n-1) parser is
         [] -> EndOfInputBeforeResultReached
 
+{-| Just like the <|> in the parsec library.
+
+First run the first parser, if it returns:
+    ParseError String
+ or EndOfInputBeforeResultReached
+
+then run the seccond parser.  If that returns one of the two errors then return the first parser's error.
+-}
+
+(<|>): Parser input output -> Parser input output -> Parser input output
+(<|>) parser1 parser2 input =
+ case parser1 input of
+  Parsed output -> Parsed output
+  errorCodes ->
+   case parser2 input of
+    Parsed output -> Parsed output
+    _ -> errorCodes
 
 {-
 The continuation parser
