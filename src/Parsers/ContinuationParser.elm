@@ -33,6 +33,14 @@ take' acc lexemeEater continuation input =
               LexemeError err -> ParseError err
   [] -> EndOfInputBeforeResultReached
 
+{-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
+takeTillEndOfInput: ParserResult output -> Parser input () -> Parser input output
+takeTillEndOfInput result parser input =
+ case parser input of
+  EndOfInputBeforeResultReached -> result
+  ParseError err -> ParseError err
+  Parsed _ -> {- This shouldn't happen -} ParserError "Programmer error: End of input parsers should not return a result."
+
 fastforward: Int -> Parser input output -> [input] -> ParserResult output
 fastforward n parser input =
  if | n == 0 -> parser input
