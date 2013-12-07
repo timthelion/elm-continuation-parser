@@ -32,7 +32,7 @@ parseTopLevelLispyLists acc input =
  let
   topLevelLists = input |>
       (take whitespace
-   <| \ whitespace' transition -> -- Parsed [LispyString (String.fromList whitespace')] {-
+   <| \ whitespace' transition ->
    if | transition == ';' ->
             fastforward 1
          <| take comment
