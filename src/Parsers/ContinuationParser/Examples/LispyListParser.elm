@@ -29,13 +29,12 @@ parseLispyListFile input = parseTopLevelLispyLists [] (charsToPositionMarkedChar
 
 parseTopLevelLispyLists: [LispyList] -> Parser (PositionMarked Char) [LispyList]
 parseTopLevelLispyLists acc input =
- let
-  topLevelLists = input |>
-      (take whitespace
+ input |>
+      (takeWithFallbackValue whitespace (Parsed acc)
    <| \ whitespace' transition ->
    if | transition == ';' ->
             fastforward 1
-         <| take comment
+         <| takeWithFallbackValue comment (Parsed acc)
          <| \ _ _ -> parseTopLevelLispyLists acc
 
       | transition == '(' ->
@@ -45,11 +44,7 @@ parseTopLevelLispyLists acc input =
 
       | otherwise -> (\input -> parseErrorAts  ("Unexpected input:" ++ (show transition)) input)
  )
- in
- case topLevelLists of
-  EndOfInputBeforeResultReached -> Parsed acc
-  ParseError err -> ParseError err
-  Parsed output -> Parsed output
+
 
 takeLispyList: ContinuationParser (PositionMarked Char) LispyList () [LispyList]
 takeLispyList continuation input =

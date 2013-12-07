@@ -24,22 +24,28 @@ data EatenLexeme opinion output
  | IncompleteLexeme
 
 take: LexemeEater input opinion intermediate -> ContinuationParser input intermediate opinion output
-take lexemeEater continuation input = take' [] lexemeEater continuation input
-take' acc lexemeEater continuation input =
+take lexemeEater continuation input = take' [] lexemeEater EndOfInputBeforeResultReached continuation input
+
+take': [input] -> LexemeEater input opinion intermediate -> ParserResult output -> ContinuationParser input intermediate opinion output
+take' acc lexemeEater fallbackValue continuation input =
  case input of
   (i::is) -> case lexemeEater acc i of
               EatenLexeme result -> continuation result.lexeme result.transition (i::is)
-              IncompleteLexeme -> take' (acc++[i]) lexemeEater continuation is
+              IncompleteLexeme -> take' (acc++[i]) lexemeEater fallbackValue continuation is
               LexemeError err -> ParseError err
-  [] -> EndOfInputBeforeResultReached
+  [] -> fallbackValue
+
+{-| Just like take, except return the given fallback value if we reach the end of input, rather than the default EndOfInputBeforeResultReached -}
+takeWithFallbackValue: LexemeEater input opinion intermediate -> ParserResult output -> ContinuationParser input intermediate opinion output
+takeWithFallbackValue lexemeEater fallbackValue continuation input = take' [] lexemeEater fallbackValue continuation input
 
 {-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
-takeTillEndOfInput: ParserResult output -> Parser input () -> Parser input output
-takeTillEndOfInput result parser input =
+tillEndOfInput: ParserResult output -> Parser input () -> Parser input output
+tillEndOfInput result parser input =
  case parser input of
   EndOfInputBeforeResultReached -> result
   ParseError err -> ParseError err
-  Parsed _ -> {- This shouldn't happen -} ParserError "Programmer error: End of input parsers should not return a result."
+  Parsed _ -> {- This shouldn't happen -} ParseError "Programmer error: End of input parsers should not return a result."
 
 fastforward: Int -> Parser input output -> [input] -> ParserResult output
 fastforward n parser input =
