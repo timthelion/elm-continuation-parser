@@ -26,7 +26,7 @@ takeString' acc continuation input =
    if | transition == '\\' ->
           fastforward 1
        <| take escapedChar
-       <| \ escaped _ -> fastforward 1 <| takeString' (acc++ segment ++ [escaped]) continuation
+       <| \ escaped _ -> takeString' (acc++ segment ++ [escaped]) continuation
 
       | transition == '\"' -> fastforward 1 <| continuation (String.fromList <| acc ++ segment) ())
 

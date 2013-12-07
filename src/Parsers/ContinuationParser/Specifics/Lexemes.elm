@@ -58,16 +58,20 @@ normalStringSegment = positionMarkedCharset (\c-> c/='\"' && c/= '\\')
 This eats a single character and then maps it to any associated escape sequence.  AKA 'n' becomes '/n'.
 
 -}
---escapedChar: LexemeEater (PositionMarked Char) () Char
+--escapedChar: LexemeEater (PositionMarked Char) Char Char
 escapedChar acc input =
- let
-  output =
-   if | input.char == 't' -> '\t'
-      | input.char == 'n' -> '\n'
-      | input.char == 'r' -> '\r'
-      | input.char == '0' -> '\0'      
-      | otherwise -> input.char
- in EatenLexeme {lexeme=output,transition=()}
+ case acc of
+  [] -> IncompleteLexeme
+  (escaped::[]) ->
+   let
+    output =
+     if | escaped.char == 't' -> '\t'
+        | escaped.char == 'n' -> '\n'
+        | escaped.char == 'r' -> '\r'
+        | escaped.char == '0' -> '\0'      
+        | otherwise -> escaped.char
+   in
+   EatenLexeme {lexeme=output,transition=input}
 
 {-
 The continuation parser
