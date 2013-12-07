@@ -39,50 +39,46 @@ parseTopLevelLispyLists acc input =
 
       | transition == '(' ->
             fastforward 1
-         <| takeLispyList
-         <| \ list _ -> parseTopLevelLispyLists (acc++[list])
+         <| (takeLispyList
+         <| \ list _ -> parseTopLevelLispyLists (acc++[list]) `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block.")
 
       | otherwise -> (\input -> parseErrorAts  ("Unexpected input:" ++ (show transition)) input)
  )
 
 
 takeLispyList: ContinuationParser (PositionMarked Char) LispyList () [LispyList]
-takeLispyList continuation input =
- let
-  noCloseParenError = errorAts "Matching close parethesis not found for parenthesized block." input
- in
- takeLispyList' [] noCloseParenError continuation input
+takeLispyList continuation = takeLispyList' [] continuation
  
-takeLispyList': [LispyList] -> String -> ContinuationParser (PositionMarked Char) LispyList () [LispyList]
-takeLispyList' acc closeParenError continuation input =
+takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList () [LispyList]
+takeLispyList' acc continuation input =
  input |>
   (take whitespace <| \ _ transition ->
    if | transition == ';' ->
           fastforward 1
        <| take comment
-       <| \ _ _ -> takeLispyList' acc closeParenError continuation
+       <| \ _ _ -> takeLispyList' acc continuation
 
       | transition == '\"' ->
           fastforward 1
        <| takeString
-       <| \ string _ -> takeLispyList' (acc++[LispyString string]) closeParenError continuation
+       <| \ string _ -> takeLispyList' (acc++[LispyString string]) continuation
 
       | transition == '(' ->
           fastforward 1
        <| takeLispyList
-       <| \ list _ -> takeLispyList' (acc++[list]) closeParenError continuation
+       <| \ list _ -> takeLispyList' (acc++[list]) continuation
       | transition == ')' ->
           fastforward 1
        <| continuation (List acc) ()
 
       | Char.isDigit transition ->
           take float
-       <| \ number' _ -> takeLispyList' (acc++[Number number']) closeParenError continuation
+       <| \ number' _ -> takeLispyList' (acc++[Number number']) continuation
 
       | otherwise -> take
           lispySymbol
-       <| \ symbol _ -> takeLispyList' (acc++[Symbol symbol]) closeParenError continuation)
-  `markEndOfInputAsError` closeParenError
+       <| \ symbol _ -> takeLispyList' (acc++[Symbol symbol]) continuation)
+
 
 lispySymbol =
  symbol
