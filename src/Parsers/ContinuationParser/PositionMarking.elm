@@ -50,14 +50,16 @@ errorAts message input =
 --markEndOfInputAsErrorAt: ContinuationParser input intermediate opinion output -> String -> (Continuation input intermediate opinion output) -> Parser input output
 markEndOfInputAsErrorAt continuationparser message continuation' input =
  let
+  continuationId = errorAts message input
   --continuation: Continuation input intermediate opinion output
   continuation intermediate opinion input' =
       Continue
-   <| computeLater
-       (continuation' intermediate opinion)
-       input'
+       {id = continuationId
+       ,continuation = computeLater
+         (continuation' intermediate opinion)
+         input'}
  in
- case continuationparser continuation input of
+ case  evaluateContinuationsTill continuationId <| continuationparser continuation input of
   EndOfInputBeforeResultReached ->
    parseErrorAts message input
   otherCases -> otherCases

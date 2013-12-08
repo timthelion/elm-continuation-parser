@@ -12,11 +12,13 @@ data ParserResult input output
  = Parsed output
  | ParseError String
  | EndOfInputBeforeResultReached
- | Continue (Lazy [input] (ParserResult input output))
+ | Continue {id:String,continuation:Lazy [input] (ParserResult input output)}
 
-type Continuation input intermediate opinion output = intermediate -> opinion -> Parser input output
+type Continuation input intermediate opinion output
+ = intermediate -> opinion -> Parser input output
 
-type ContinuationParser input intermediate opinion output = (Continuation input intermediate opinion output) -> Parser input output
+type ContinuationParser input intermediate opinion output
+ = (Continuation input intermediate opinion output) -> Parser input output
 
 parse: [input] -> Parser input output -> ParserResult input output
 parse input parser =
@@ -24,7 +26,14 @@ parse input parser =
 
 evaluateContinuations result =
  case result of
-  Continue value ->  evaluateContinuations <| evaluate value
+  Continue value ->  evaluateContinuations <| evaluate value.continuation
+  _ -> result
+
+evaluateContinuationsTill id result =
+ case result of
+  Continue value ->
+   if | value.id == id -> Continue value
+      | otherwise -> evaluateContinuationsTill id <| evaluate value.continuation
   _ -> result
 
 type LexemeEater input opinion output = [input] -> input -> EatenLexeme opinion output
