@@ -25,7 +25,7 @@ So what have we changed here?  Not much:
    `parseErrorAts: String -> [PositionMarked char] -> ParserResult output` produces a `ParseError` based on the given string and with line column information based on the location of the beginning of the provided input.
  - Finally, we changed the `field` and `tillEndOfLineUnpadded` functions to `handlePositionMarkedInput`
 
-Try out our new changes bellow:
+Try out our new changes bellow([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/ParseUserDataWithLineNumbers.elm)):
 |]
 
 (userDataWithLineNumbersField,userDataWithLineNumbersInput) =

@@ -128,7 +128,7 @@ This LexemeEater is built with the `lexeme` function. The `lexeme` function take
 
 Finally, the `whitespace` LexemeEater used in this example is the same as the one defined near the beginning of this tutorial.
 
-You can play with this parser bellow:
+You can play with this parser bellow ([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/ParseUserDataWithoutLineNumbers.elm)):
 |]
 
 (userDataWithoutLineNumbersField,userDataWithoutLineNumbersInput) =
