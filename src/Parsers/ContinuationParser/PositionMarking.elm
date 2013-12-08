@@ -5,6 +5,7 @@ Copyright info at end of file
 -}
 module Parsers.ContinuationParser.PositionMarking where
 import open Parsers.ContinuationParser
+import open Lazy
 
 type PositionMarked char =
  {line: Int
@@ -12,13 +13,10 @@ type PositionMarked char =
  ,char: char}
 
 charsToPositionMarkedChars: [Char] -> [PositionMarked Char]
-charsToPositionMarkedChars chars = charsToPositionMarkedChars' chars 0 0
-charsToPositionMarkedChars' chars line col =
- case chars of
-  (c::cs) -> {line=line,column=col,char=c} ::
-    if | c == '\n' -> charsToPositionMarkedChars' cs (line + 1) 0
-       | otherwise -> charsToPositionMarkedChars' cs line (col+1)
-  [] -> []
+charsToPositionMarkedChars chars = (\(acc,_,_) -> reverse acc) <|  foldl charToPositionMarkedChar ([],0,0) chars
+charToPositionMarkedChar char (acc,line,col) =
+    if | char == '\n' -> ({line=line,column=col,char=char} :: acc,line+1,0)
+       | otherwise ->    ({line=line,column=col,char=char} :: acc,line,col+1)
 
 handlePositionMarkedInput: LexemeEater char char output -> LexemeEater (PositionMarked char) char output
 handlePositionMarkedInput unmarkedLexemeEater =
@@ -32,10 +30,10 @@ handlePositionMarkedInput unmarkedLexemeEater =
     EatenLexeme lexeme -> EatenLexeme lexeme
     IncompleteLexeme -> IncompleteLexeme)
 
-parseErrorAt: String -> PositionMarked char -> ParserResult output
+parseErrorAt: String -> PositionMarked char -> ParserResult input output
 parseErrorAt message location = ParseError <| errorAt message location
 
-parseErrorAts: String -> [PositionMarked char] -> ParserResult output
+parseErrorAts: String -> [PositionMarked char] -> ParserResult input output
 parseErrorAts message input = ParseError <| errorAts message input
 
 errorAt: String -> PositionMarked char -> String
@@ -49,9 +47,17 @@ errorAts message input =
   (location::_) -> errorAt message location
   [] -> message ++ "\n    At end of input"
 
---markEndOfInputAsErrorAt: Parser input output -> String -> Parser input output
-markEndOfInputAsErrorAt parser message input =
- case parser input of
+--markEndOfInputAsErrorAt: ContinuationParser input intermediate opinion output -> String -> (Continuation input intermediate opinion output) -> Parser input output
+markEndOfInputAsErrorAt continuationparser message continuation' input =
+ let
+  --continuation: Continuation input intermediate opinion output
+  continuation intermediate opinion input' =
+      Continue
+   <| computeLater
+       (continuation' intermediate opinion)
+       input'
+ in
+ case continuationparser continuation input of
   EndOfInputBeforeResultReached ->
    parseErrorAts message input
   otherCases -> otherCases

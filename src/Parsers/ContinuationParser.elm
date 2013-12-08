@@ -4,17 +4,28 @@ This module provides the basic datatypes and the most fundamental functions used
 For copyright information see the COPYING file or the end of this file.
 -}
 module Parsers.ContinuationParser where
+import open Lazy
 
-type Parser input output = [input] -> ParserResult output
+type Parser input output = [input] -> ParserResult input output
 
-data ParserResult output
+data ParserResult input output
  = Parsed output
  | ParseError String
  | EndOfInputBeforeResultReached
+ | Continue (Lazy [input] (ParserResult input output))
 
 type Continuation input intermediate opinion output = intermediate -> opinion -> Parser input output
 
 type ContinuationParser input intermediate opinion output = (Continuation input intermediate opinion output) -> Parser input output
+
+parse: [input] -> Parser input output -> ParserResult input output
+parse input parser =
+ evaluateContinuations (parser input)
+
+evaluateContinuations result =
+ case result of
+  Continue value ->  evaluateContinuations <| evaluate value
+  _ -> result
 
 type LexemeEater input opinion output = [input] -> input -> EatenLexeme opinion output
 
@@ -23,10 +34,11 @@ data EatenLexeme opinion output
  | LexemeError String
  | IncompleteLexeme
 
-take: LexemeEater input opinion intermediate -> ContinuationParser input intermediate opinion output
+take: LexemeEater input opinion intermediate
+ -> ContinuationParser input intermediate opinion output
 take lexemeEater continuation input = take' [] lexemeEater EndOfInputBeforeResultReached continuation input
 
-take': [input] -> LexemeEater input opinion intermediate -> ParserResult output -> ContinuationParser input intermediate opinion output
+take': [input] -> LexemeEater input opinion intermediate -> ParserResult input output -> ContinuationParser input intermediate opinion output
 take' acc lexemeEater fallbackValue continuation input =
  case input of
   (i::is) -> case lexemeEater acc i of
@@ -36,18 +48,18 @@ take' acc lexemeEater fallbackValue continuation input =
   [] -> fallbackValue
 
 {-| Just like take, except return the given fallback value if we reach the end of input, rather than the default EndOfInputBeforeResultReached -}
-takeWithFallbackValue: LexemeEater input opinion intermediate -> ParserResult output -> ContinuationParser input intermediate opinion output
+takeWithFallbackValue: LexemeEater input opinion intermediate -> ParserResult input output -> ContinuationParser input intermediate opinion output
 takeWithFallbackValue lexemeEater fallbackValue continuation input = take' [] lexemeEater fallbackValue continuation input
 
 {-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
-tillEndOfInput: ParserResult output -> Parser input () -> Parser input output
+tillEndOfInput: ParserResult input output -> Parser input () -> Parser input output
 tillEndOfInput result parser input =
  case parser input of
   EndOfInputBeforeResultReached -> result
   ParseError err -> ParseError err
   Parsed _ -> {- This shouldn't happen -} ParseError "Programmer error: End of input parsers should not return a result."
 
-fastforward: Int -> Parser input output -> [input] -> ParserResult output
+fastforward: Int -> Parser input output -> [input] -> ParserResult input output
 fastforward n parser input =
  if | n == 0 -> parser input
     | otherwise ->

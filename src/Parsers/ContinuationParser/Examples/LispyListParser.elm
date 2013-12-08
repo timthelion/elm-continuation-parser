@@ -29,8 +29,8 @@ parseLispyListFile input = parseTopLevelLispyLists [] (charsToPositionMarkedChar
 
 parseTopLevelLispyLists: [LispyList] -> Parser (PositionMarked Char) [LispyList]
 parseTopLevelLispyLists acc input =
- input |>
-      (takeWithFallbackValue whitespace (Parsed acc)
+ parse input <|
+      takeWithFallbackValue whitespace (Parsed acc)
    <| \ whitespace' transition ->
    if | transition == ';' ->
             fastforward 1
@@ -39,17 +39,15 @@ parseTopLevelLispyLists acc input =
 
       | transition == '(' ->
             fastforward 1
-         <| (takeLispyList
-         <| \ list _ -> parseTopLevelLispyLists (acc++[list]) `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block.")
+         <|  takeLispyList `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block."
+         <| \ list _ -> parseTopLevelLispyLists (acc++[list])
 
       | otherwise -> (\input -> parseErrorAts  ("Unexpected input:" ++ (show transition)) input)
- )
 
-
-takeLispyList: ContinuationParser (PositionMarked Char) LispyList () [LispyList]
+takeLispyList: ContinuationParser (PositionMarked Char) LispyList Char [LispyList]
 takeLispyList continuation = takeLispyList' [] continuation
  
-takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList () [LispyList]
+takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList Char [LispyList]
 takeLispyList' acc continuation input =
  input |>
   (take whitespace <| \ _ transition ->
@@ -69,7 +67,7 @@ takeLispyList' acc continuation input =
        <| \ list _ -> takeLispyList' (acc++[list]) continuation
       | transition == ')' ->
           fastforward 1
-       <| continuation (List acc) ()
+       <| continuation (List acc) ')'
 
       | Char.isDigit transition ->
           take float

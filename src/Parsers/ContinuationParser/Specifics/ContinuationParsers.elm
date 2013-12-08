@@ -16,10 +16,14 @@ import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.Specifics.Lexemes
+import open Lazy
 
---takeString: ContinuationParser (PositionMarked Char) String () output
-takeString continuation = takeString' [] continuation `markEndOfInputAsErrorAt` "Matching quote not found for string."
---takeString': [Char] -> ContinuationParser (PositionMarked Char) String () output
+takeString: ContinuationParser (PositionMarked Char) String Char output
+takeString = 
+ takeString' []
+ `markEndOfInputAsErrorAt` "Matching quote not found for string."
+
+takeString': [Char] -> ContinuationParser (PositionMarked Char) String Char output
 takeString' acc continuation input =
  input |>
   (take normalStringSegment <| \ segment transition ->
@@ -28,7 +32,9 @@ takeString' acc continuation input =
        <| take escapedChar
        <| \ escaped _ -> takeString' (acc++ segment ++ [escaped]) continuation
 
-      | transition == '\"' -> fastforward 1 <| continuation (String.fromList <| acc ++ segment) ())
+      | transition == '\"' ->
+            fastforward 1
+         <| continuation (String.fromList <| acc ++ segment) '\"')
 
 {-
 The continuation parser
