@@ -13,7 +13,11 @@ Name: Timothy Hobbs
 Location: Prague
 Ocupation: Programmer
 ````
-And we want to put it into a record of  `type UserData = {name:String,location:String,occupation:String}`
+And we want to put it into a record of
+
+````
+type UserData = {name:String,location:String,occupation:String}
+````
 
 ### What is our parser going to do?
 
@@ -81,7 +85,7 @@ parseUserData' =
 
 Here we `take` things in the order that they should appear in the file.  That weird `<| \ _ _ ->` notation is just us passing a lamda which defines a Continuation.  It is similar to the syntax we see in Philip Wadler's 1992 paper ["The Essence of Functional Programming."](http://homepages.inf.ed.ac.uk/wadler/topics/monads.html).
 
-PS: That paper is a good read for those who might be looking at doing monad like stuff in Elm, as all of it's examples are written without taking advantage of typeclasses or do-notation.  For the same reason, it is a good read for anyone just generally confused about monads.
+PS: That paper is a good read for those who might be looking at doing monad like stuff in Elm as all of its examples are written without taking advantage of typeclasses or do-notation.  For the same reason, it is a good read for anyone just generally confused about monads.
 
 ````
 take foo <| \ a b ->
@@ -106,11 +110,15 @@ do
  return (Parsed (a,c))
 ````
 
+**What are all those fastforwards for?**  We put fastforwards after takes when we want to ignore the transition between two lexemes.  In this case
+ - "take nameField" leaves us at the transition ':', past which we fast forward
+ - "take tillEndOfLineUnpadded" leaves us at the transition '\n' past which we also fast forward.
+
 #### Our LexemeEaters
 
 I've yet to define several LexemeEaters; `nameField`,`locationField`, and `occupationField` are defined bellow as:
 
-````
+ ````
 field: String -> LexemeEater Char Char [Char]
 field name = keyword (String.toList name) (\c->c==':')
 nameField = field "Name"
@@ -118,13 +126,13 @@ locationField = field "Location"
 occupationField = field "Occupation"
 ````
 
-The `keyword` function takes a list representing the keyword to be eaten and a "punctuation test".  The punctuation test is used to determine if the lexeme being eaten has been eaten in its entirety.  Take for example the keyword "as". If we didn't test for punctuation at the end of this keyword then our LexemeEater would match the word "assumtion".  The `keyword` function produces a LexemeEater which demands that all keywords be followed by some form of punctiation, be it whitespace or a symbol.  Here, we define punctuation as being the character ':'.  Keyword LexemeEaters do not consume the punctuation markings that follow the lexeme, and this is why we need to `fastforward` past the ':' for each feild marker.
+The `keyword` function takes a list representing the keyword to be eaten and a "punctuation test".  The punctuation test is used to determine if the lexeme being eaten has been eaten in its entirety.  Take for example the keyword "as". If we didn't test for punctuation at the end of this keyword then our LexemeEater would match the word "assumtion".  The `keyword` function produces a LexemeEater which demands that all keywords be followed by some form of punctuation, be it whitespace or a symbol.  Here, we define punctuation as being the character ':'.  Keyword LexemeEaters do not consume the punctuation markings that follow the lexeme and this is why we need to `fastforward` past the ':' for each feild marker.
 
 We still have one last LexemeEater to define and that is:
 ````
 tillEndOfLineUnpadded = lexeme (\c->c/='\n') (String.trim . String.fromList)
 ````
-This LexemeEater is built with the `lexeme` function. The `lexeme` function takes two functions as arguments `test: char -> Bool` and `conversion: [char] -> output`.  The LexemeEater produced by `lexeme` will eat so long as `test` is positive for the current next character.  As a value it produces the eaten input as passed through the `conversion` function.  Our conversion function turns it to a string and removes whitespace from either side.
+This LexemeEater is built with the `lexeme` function. The `lexeme` function takes two functions as arguments `test: char -> Bool` and `conversion: [char] -> output`.  The LexemeEater produced by `lexeme` will eat so long as `test` is positive for the current next-character.  The intermediate value that it produces is the eaten input as passed through the `conversion` function.  Our conversion function turns the input into a string and removes whitespace from either side.
 
 Finally, the `whitespace` LexemeEater used in this example is the same as the one defined near the beginning of this tutorial.
 

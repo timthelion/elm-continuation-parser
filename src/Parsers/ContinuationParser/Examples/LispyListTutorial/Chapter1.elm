@@ -3,7 +3,7 @@ module Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter1 where
 basicTypes = [markdown|
 # The continuation parser ([download/source](https://github.com/timthelion/elm-continuation-parser))
 
-The continuation parser is a library which helps you create Parsers.  It takes inspiration from the Haskell [Parsec](http://hackage.haskell.org/package/parsec) library in that it consists of a string of "input consumers" which produce intermediate values.
+The continuation parser is a library which helps you create Parsers.  It takes inspiration from the Haskell [Parsec](http://hackage.haskell.org/package/parsec) library in that these parsers consist of strings of "input consumers" which produce intermediate values.
 
 The basic parser type is:
 ````
@@ -17,7 +17,7 @@ data ParserResult input output
  | EndOfInputBeforeResultReached
  | Continue {id:String,continuation:Lazy [input] (ParserResult input output)}
 ````
-Note: Do not pay attention to the "Continue" case. It is not strictly necessary. Its only purpose is [trampolining](http://stackoverflow.com/questions/189725/what-is-a-trampoline-function).
+Note: For now, do not pay attention to the "Continue" case. It is not strictly necessary. Its only purpose is [trampolining](http://stackoverflow.com/questions/189725/what-is-a-trampoline-function).
 
 Unlike parsec, the continuation parser is written in continuation passing style rather than monadic style.
 
@@ -40,7 +40,7 @@ ContinuationParsers always:
 type Continuation input intermediate opinion output
  = intermediate -> opinion -> Parser input output
 ````
-A Continuation is just a function which takes an intermediate value and an "opinion" on what probably comes next and some input. It produces a ParserResult.
+A Continuation is just a function which takes an intermediate value, an "opinion" on what probably comes next, and some input. It produces a ParserResult.
 
 The most commonly used type of ContinuationParsers is produced by the `take` function.
 
@@ -80,6 +80,6 @@ whitespace = charset isWhitespace
 parse: [input] -> Parser input output -> ParserResult input output
 ````
 
-While from the standpoint of types, this may not seem entirely necessary in reality it is.  This function evaluates trampolined thunks passed down with the "Continue" case.  The output of this function is therefore never "Continue ..." but one of the more usefull results.
+While from the standpoint of types this may not seem entirely necessary, in reality it is.  This function evaluates trampolined thunks passed down with the "Continue" case.  The output of this function is therefore never "Continue ..." but one of the more usefull results.
 
 |]
