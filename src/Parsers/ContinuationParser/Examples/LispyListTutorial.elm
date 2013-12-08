@@ -16,12 +16,16 @@ import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter3 as Chapter
 
 main = (\ userDataWithoutLineNumbersField
           userDataWithoutLineNumbersOutput
+          userDataWithLineNumbersField
+          userDataWithLineNumbersOutput
            ->flow down
  [Chapter1.basicTypes
  ,Chapter2.userDataWithoutLineNumbers
  ,userDataWithoutLineNumbersField
  ,userDataWithoutLineNumbersOutput
- ,Chapter3.userDataWithLineNumbers]) <~ Chapter2.userDataWithoutLineNumbersField ~ Chapter2.userDataWithoutLineNumbersOutput
+ ,Chapter3.userDataWithLineNumbers
+ ,userDataWithLineNumbersField
+ ,userDataWithLineNumbersOutput]) <~ Chapter2.userDataWithoutLineNumbersField ~ Chapter2.userDataWithoutLineNumbersOutput ~ Chapter3.userDataWithLineNumbersField ~ Chapter3.userDataWithLineNumbersOutput
 
 {-
 The continuation parser

@@ -14,49 +14,7 @@ Since I presume that most parsers will want to handle PositionMarked input and p
 
 Here is the sourcecode to our new parser which prints error messages containing line numbers:
 ````
-import open Parsers.ContinuationParser
-import open Parsers.ContinuationParser.LexemeEaters
-import open Parsers.ContinuationParser.PositionMarking
-import open Parsers.ContinuationParser.Specifics.Lexemes
 
-import String
-
-parseUserData: String -> Either String UserData
-parseUserData unparsed
- =
- parse
-  (charsToPositionMarkedChars (String.toList unparsed ++ ['\n']))
-  parseUserData'
-
-parseUserData': Parser (PositionMarked Char) UserData
-parseUserData' =
- take nameField |> \ _ _ ->
- fastforward 1 <|
- take tillEndOfLineUnpadded <| \ name _ ->
- take locationField <| \ _ _ ->
- fastforward 1 <|
- take tillEndOfLineUnpadded <| \ location _ ->
- take occupationField <| \ _ _ ->
- fastforward 1 <|
- take tillEndOfLineUnpadded <| \ occupation _ _ ->
- tillEndOfInput
-  (Parsed
-   {name=name
-   ,location=location
-   ,occupation=occupation})
-  <| take whitespace
-  <| \ _ transition input ->
-   parseErrorAts ("Unexpected input "++(show transition)++" near end of file.") input
-
-field: String -> LexemeEater (PositionMarked Char) Char [Char]
-field name = handlePositionMarkedInput <| keyword (String.toList name) (==':')
-nameField = field "Name"
-locationField = field "Location"
-occupation = field "Occupation"
-
-tillEndOfLineUnpadded
- =  handlePositionMarkedInput
- <| lexeme (/='\n') (String.trim . String.fromList)
 ````
 
 So what have we changed here?  Not much:
@@ -75,4 +33,4 @@ Try out our new changes bellow:
   "Enter some UserData to be parsed here."
   "Name: Anne\nLocation: Paris\nOccupation: Truck driver"
 
-userDataWithLineNumbersOutput = (\input->asText <| ParseUserDataWitLineNumbers.parseUserData input) <~ userDataWithLineNumbersInput
+userDataWithLineNumbersOutput = (\input->asText <| ParseUserDataWithLineNumbers.parseUserData input) <~ userDataWithLineNumbersInput
