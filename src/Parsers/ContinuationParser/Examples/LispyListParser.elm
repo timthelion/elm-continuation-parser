@@ -14,6 +14,8 @@ import open Parsers.ContinuationParser.Specifics.Lexemes
 import open Parsers.ContinuationParser.Specifics.ContinuationParsers
 import open Parsers.CharacterClassification
 
+import open Lazy
+
 import Char
 import String
 import List
@@ -40,7 +42,13 @@ parseTopLevelLispyLists acc input =
       | transition == '(' ->
             fastforward 1
          <|  takeLispyList `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block."
-         <| \ list _ -> parseTopLevelLispyLists (acc++[list])
+         <| \ list _ input ->
+              Continue
+               {id=""
+               ,continuation =
+                 computeLater
+                  (parseTopLevelLispyLists (acc++[list]))
+                  input}
 
       | otherwise -> (\input -> parseErrorAts  ("Unexpected input:" ++ (show transition)) input)
 
