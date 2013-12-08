@@ -16,10 +16,17 @@ charset test acc input =
 keyword: [Char] -> (Char->Bool) -> LexemeEater Char Char [Char]
 keyword word punctuationTest acc input =
  if | punctuationTest input ->
-       if | acc == word -> EatenLexeme {lexeme=acc,transition=input}
-          | otherwise -> LexemeError <| "Incomplete keyword: Got "++(String.fromList acc)++" expected "++(String.fromList word)
+       (if | acc == word -> EatenLexeme {lexeme=acc,transition=input}
+           | otherwise ->
+              LexemeError <| "Incomplete keyword: Got \""
+                              ++ (String.fromList acc)
+                              ++ "\" expected \""
+                              ++ (String.fromList word) ++ "\"")
     | isPrefixOf (acc++[input]) word -> IncompleteLexeme
-    | otherwise -> LexemeError <| "Unexpected character:"++(show input)
+    | otherwise -> LexemeError <| "Unexpected character:"++(show input) ++ "\n Got \""
+                              ++ (String.fromList (acc++[input]))
+                              ++ "\" expected \""
+                              ++ (String.fromList word) ++ "\""
 
 isPrefixOf: [a] -> [a] -> Bool
 isPrefixOf prefix list =
