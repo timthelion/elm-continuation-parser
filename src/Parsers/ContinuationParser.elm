@@ -61,7 +61,7 @@ takeWithFallbackValue: LexemeEater input opinion intermediate -> ParserResult in
 takeWithFallbackValue lexemeEater fallbackValue continuation input = take' [] lexemeEater fallbackValue continuation input
 
 {-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
-tillEndOfInput: ParserResult input output -> Parser input () -> Parser input output
+tillEndOfInput: ParserResult input output -> Parser input ignoredOutput -> Parser input output
 tillEndOfInput result parser input =
  case parser input of
   EndOfInputBeforeResultReached -> result
