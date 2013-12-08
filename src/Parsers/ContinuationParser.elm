@@ -75,7 +75,7 @@ fastforward n parser input =
        case input of
         (i::is) -> fastforward (n-1) parser is
         [] -> EndOfInputBeforeResultReached
-
+{-
 {-| Just like the <|> in the parsec library.
 
 First run the first parser, if it returns:
@@ -93,7 +93,7 @@ then run the seccond parser.  If that returns one of the two errors then return 
    case parser2 input of
     Parsed output -> Parsed output
     _ -> errorCodes
-
+-}
 {-
 The continuation parser
 Parsec inspired continuation passing style parser
