@@ -17,7 +17,7 @@ data ParserResult input output
  | EndOfInputBeforeResultReached
  | Continue {id:String,continuation:Lazy [input] (ParserResult input output)}
 ````
-Note: Do not pay attention to the "Continue" case. It is not strictly necessary. Its only purpose is trampolining.
+Note: Do not pay attention to the "Continue" case. It is not strictly necessary. Its only purpose is [trampolining](http://stackoverflow.com/questions/189725/what-is-a-trampoline-function).
 
 Unlike parsec, the continuation parser is written in continuation passing style rather than monadic style.
 
@@ -73,4 +73,13 @@ Of course, there was a bit of boiler-plate in there.  Rather than writing that c
 ````
 whitespace = charset isWhitespace
 ````
+
+**Finally** I'd like to point out that `Parser`s are run on input using the `parse` function:
+
+````
+parse: [input] -> Parser input output -> ParserResult input output
+````
+
+While from the standpoint of types, this may not seem entirely necessary in reality it is.  This function evaluates trampolined thunks passed down with the "Continue" case.  The output of this function is therefore never "Continue ..." but one of the more usefull results.
+
 |]
