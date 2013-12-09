@@ -1,7 +1,7 @@
 module Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter1 where
 
 basicTypes = [markdown|
-# The continuation parser ([download/source](https://github.com/timthelion/elm-continuation-parser))
+# The basic types
 
 The continuation parser is a library which helps you create Parsers.  It takes inspiration from the Haskell [Parsec](http://hackage.haskell.org/package/parsec) library in that these parsers consist of strings of "input consumers" which produce intermediate values.
 

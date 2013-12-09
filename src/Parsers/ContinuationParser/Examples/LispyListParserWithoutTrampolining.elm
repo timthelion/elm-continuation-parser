@@ -6,7 +6,7 @@ This module provides a sample parser created using functionality provided by the
 Copyright information can be found in the COPYING file or at the end of this file.
 -}
 
-module Parsers.ContinuationParser.Examples.LispyListParser where
+module Parsers.ContinuationParser.Examples.LispyListParserWithoutTrampolining where
 import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.LexemeEaters
@@ -44,8 +44,7 @@ parseTopLevelLispyLists acc =
       | transition == '(' ->
             fastforward 1
          <|  takeLispyList `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block."
-         <| \ list _ ->
-           createSimpleContinuationThunk <| parseTopLevelLispyLists (acc++[list])
+         <| \ list _ -> parseTopLevelLispyLists (acc++[list])
 
       | otherwise ->
          (\input -> parseErrorAts  ("Unexpected input:" ++ (show transition)) input)
