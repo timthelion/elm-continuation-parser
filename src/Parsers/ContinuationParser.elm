@@ -24,6 +24,12 @@ parse: [input] -> Parser input output -> ParserResult input output
 parse input parser =
  evaluateContinuations (parser input)
 
+createSimpleContinuationThunk: Parser input output -> [input] -> ParserResult input output
+createSimpleContinuationThunk parser input =
+ Continue
+  {id=""
+  ,continuation = computeLater parser input}
+
 evaluateContinuations result =
  case result of
   Continue value ->  evaluateContinuations <| evaluate value.continuation
