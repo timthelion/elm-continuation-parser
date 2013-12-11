@@ -1,11 +1,14 @@
 {-
 
-This module provides generally usefull ContinuationParsers
-
 Copyright info at end of file
 
 -}
 module Parsers.ContinuationParser.Specifics.ContinuationParsers where
+{-|
+This module provides generally usefull ContinuationParsers
+
+@docs takeString
+-}
 
 {- Base libraries -}
 import String

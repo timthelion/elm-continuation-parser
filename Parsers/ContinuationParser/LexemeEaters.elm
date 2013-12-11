@@ -1,9 +1,13 @@
 {-
-This module provides the fundamental functions for eating(parsing) lexemes.
-
 Copyright information can be found at the end of this file.
 -}
 module Parsers.ContinuationParser.LexemeEaters where
+{-|
+This module provides the fundamental functions for eating(parsing) lexemes.
+
+@docs charset, keyword, lexeme, lexemeMaybe
+-}
+
 import open Parsers.ContinuationParser
 import String
 import List

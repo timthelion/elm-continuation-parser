@@ -100,7 +100,7 @@ createSimpleContinuationThunk parser input = createContinuationThunk "" parser i
 
 {-| Create a thunk with the given id -}
 createContinuationThunk: String -> Parser input output -> [input] -> ParserResult input output
-createSimpleContinuationThunk id parser input =
+createContinuationThunk id parser input =
  Continue
   {id=id
   ,continuation = computeLater parser input}
