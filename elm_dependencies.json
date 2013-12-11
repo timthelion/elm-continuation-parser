@@ -1,0 +1,15 @@
+{ "version": "0.0"
+, "summary": "Parser library for Elm"
+, "description": "A powerful parsing library for writing parsers in continuation passing style."
+, "license": "AGPLv3"
+, "repository": "https://github.com/timthelion/elm-continuation-parser.git"
+, "exposed-modules":
+    [ "Lazy"
+    , "Parsers.CharacterClassification"
+    , "Parsers.ContinuationParser"
+    , "Parsers.ContinuationParser.LexemeEaters"
+    , "Parsers.ContinuationParser.PositionMarking"
+    , "Parsers.ContinuationParser.Specifics.Lexemes"
+    , "Parsers.ContinuationParser.Specifics.ContinuationParsers"
+    ]
+}
