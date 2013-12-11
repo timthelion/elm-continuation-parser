@@ -45,7 +45,7 @@ parseTopLevelLispyLists acc =
             fastforward 1
          <|  takeLispyList `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block."
          <| \ list _ ->
-           createSimpleContinuationThunk <| parseTopLevelLispyLists (acc++[list])
+           parseTopLevelLispyLists (acc++[list])
 
       | otherwise ->
          (\input -> parseErrorAts  ("Unexpected input:" ++ (show transition)) input)
@@ -70,9 +70,10 @@ takeLispyList' acc continuation =
           fastforward 1
        <| takeLispyList
        <| \ list _ -> takeLispyList' (acc++[list]) continuation
+
       | transition == ')' ->
           fastforward 1
-       <| continuation (List acc) ')'
+       <| createSimpleContinuationThunk <| continuation (List acc) ')'
 
       | Char.isDigit transition ->
           take float
