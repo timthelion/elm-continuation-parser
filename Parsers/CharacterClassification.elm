@@ -1,13 +1,18 @@
 {-
-This module provides methods for identifying the types of Chars beyond the basic functions provided in the Char module.
-
 Copyright AGPL v 3.0 Timothy Hobbs see end of file or the COPYING file for copyright information. -}
 module Parsers.CharacterClassification where
+{-|
+This module provides methods for identifying the types of Chars beyond the basic functions provided in the Char module.
+
+@docs isWhitespace, isLetter
+-}
 import Char
 
+{-| Returns true if the given character is a whitespace character. -}
 isWhitespace: Char -> Bool
 isWhitespace c = c == ' ' || c == '\t' || c == '\n' || c == '\r'
 
+{-| Returns true if the given character is a letter. -}
 isLetter: Char -> Bool
 isLetter c = Char.isUpper c || Char.isLower c
 
