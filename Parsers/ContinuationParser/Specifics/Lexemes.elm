@@ -8,10 +8,6 @@ This module provides useful generic LexemeEaters.
 # LexemeEaters
 @docs whitespace, tillEndOfLine, comment, int, float, symbol, escapedChar
 
-# Building LexemeEaters
-@docs positionMarkedCharset
-
- positionMarkedCharset
 -}
 {- Basic libraries -}
 import String

@@ -54,7 +54,7 @@ isSuffixOf suffix list =
  isPrefixOf (reverse suffix) (reverse list)
 
 {-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value -}
---lexeme: (char -> bool) -> ([char] -> output) -> LexemeEater char char output
+lexeme: (char -> bool) -> ([char] -> output) -> LexemeEater char char output
 lexeme test conversion =
  convertOutput conversion (charset test)
 

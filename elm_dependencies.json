@@ -1,5 +1,6 @@
 { "version": "0.2"
 , "elm-version": "0.1"
+, "dependencies": {}
 , "summary": "Parser library for Elm"
 , "description": "A powerful parsing library for writing parsers in continuation passing style. For a longer description see: http://thobbs.cz/works/2013/elm-continuation-parser/LispyListTutorial.html"
 , "license": "LGPLv3"
