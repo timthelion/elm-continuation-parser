@@ -16,7 +16,6 @@ This file provides the basic functionality for generating error messages with li
 
 -}
 import open Parsers.ContinuationParser
-import open Lazy
 
 type PositionMarked char =
  {line: Int

@@ -1,6 +1,6 @@
 {- Unlike the rest of this program, this module is licenced Creative Commons ZERO, PUBLIC DOMAIN, NO COPYRIGHT, written by my great great great grandfather who has been dead for longer than however long copyright lasts in your juristiction. -}
 
-module Lazy where
+module Lazzy where
 {-|
 This module provides the ability to turn a function of type `a->b` into a lazy thunk of type `Lazy input output` which can then be evaluated to produce a value of type output.
 

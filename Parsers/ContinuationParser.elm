@@ -29,7 +29,7 @@ The Taker object contains the following functions:
 ## Functions
 @docs createSimpleContinuationThunk, createContinuationThunk, evaluateContinuations, evaluateContinuationsTill
 -}
-import open Lazy
+import open Lazzy
 
 {- Fundamentals -}
 type Parser input output = [input] -> ParserResult input output

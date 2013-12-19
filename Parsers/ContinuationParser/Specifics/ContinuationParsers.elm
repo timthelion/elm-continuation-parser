@@ -19,7 +19,6 @@ import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.Specifics.Lexemes
-import open Lazy
 
 t = standardTaker
 
