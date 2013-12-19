@@ -10,15 +10,20 @@ This module provides the basic datatypes and the most fundamental functions used
 @docs Parser, ParserResult, Continuation, ContinuationParser
 
 ## Functions
-@docs parse, fastforward, tillEndOfInput
+@docs parse, return, fastforward, lookAhead, tillEndOfInput
 
 # Lexemes
 
 ## Types
-@docs LexemeEater, EatenLexeme
+@docs LexemeEater, EatenLexeme, Taker, TakerOptions
 
 ## Functions
-@docs take, takeWithFallbackValue
+@newTaker
+
+The Taker object contains the following functions:
+
+ - take
+ - takeWithFallbackValue
 
 # Trampolining
 ## Functions
@@ -58,6 +63,10 @@ tillEndOfInput result parser input =
   ParseError err -> ParseError err
   Parsed _ -> {- This shouldn't happen -} ParseError "Programmer error: End of input parsers should not return a result."
 
+{-| Create a parser which ignores its input and returns the given result directly. -}
+return: ParserResult input output -> Parser input output
+return result _ = result
+
 {-| Remove a single character/token from the input -}
 fastforward: Int -> Parser input output -> [input] -> ParserResult input output
 fastforward n parser input =
@@ -66,6 +75,13 @@ fastforward n parser input =
        case input of
         (i::is) -> fastforward (n-1) parser is
         [] -> EndOfInputBeforeResultReached
+
+{-| Look ahead n characters/items/tokens in the input.   If near the end of input, returns a partial result.  Example:
+
+You ask for 5 chars when the remaining input is ['b','y','e'] and you get only 3 chars:  ['b','y','e']-}
+lookAhead: Int -> ContinuationParser input [input] () output
+lookAhead n continuation input =
+ continuation (take n input) () input
 
 {- Lexemes -}
 
@@ -76,22 +92,43 @@ data EatenLexeme opinion output
  | LexemeError String
  | IncompleteLexeme
 
-take: LexemeEater input opinion intermediate
- -> ContinuationParser input intermediate opinion output
-take lexemeEater continuation input = take' [] lexemeEater EndOfInputBeforeResultReached continuation input
+type Taker preTransformInput input intermediate opinion output =
+ {take: LexemeEater preTransformInput opinion intermediate -> ContinuationParser input intermediate opinion output
+ ,takeWithFallbackValue: LexemeEater preTransformInput opinion intermediate -> ParserResult input output -> ContinuationParser input intermediate opinion output}
 
-take': [input] -> LexemeEater input opinion intermediate -> ParserResult input output -> ContinuationParser input intermediate opinion output
-take' acc lexemeEater fallbackValue continuation input =
+type TakerOptions preTransformInput input opinion output
+ = {lexemeEaterTransform: LexemeEaterTransform preTransformInput input opinion output}
+
+type LexemeEaterTransform preTransformInput postTransformInput opinion output = LexemeEater preTransformInput opinion output -> LexemeEater postTransformInput opinion output
+
+newTaker: TakerOptions preTransformInput input opinion intermediate -> Taker preTransformInput input intermediate opinion output
+newTaker to =
+ let
+  take = takeInternal to
+  takeWithFallbackValue = takeWithFallbackValueInternal to
+ in
+ {take=take
+ ,takeWithFallbackValue=takeWithFallbackValue}
+
+
+takeInternal: TakerOptions preTransformInput input opinion intermediate -> LexemeEater preTransformInput opinion intermediate -> ContinuationParser input intermediate opinion output
+takeInternal takerOptions lexemeEater continuation input = take' takerOptions [] lexemeEater EndOfInputBeforeResultReached continuation input
+
+take': TakerOptions preTransformInput input opinion intermediate -> [input] -> LexemeEater preTransformInput opinion intermediate -> ParserResult input output -> ContinuationParser input intermediate opinion output
+take' takerOptions acc lexemeEater fallbackValue continuation input =
+ let
+  lexemeEater' = takerOptions.lexemeEaterTransform lexemeEater
+ in
  case input of
-  (i::is) -> case lexemeEater acc i of
+  (i::is) -> case lexemeEater' acc i of
               EatenLexeme result -> continuation result.lexeme result.transition (i::is)
-              IncompleteLexeme -> take' (acc++[i]) lexemeEater fallbackValue continuation is
+              IncompleteLexeme -> take' takerOptions (acc++[i]) lexemeEater fallbackValue continuation is
               LexemeError err -> ParseError err
-  [] -> fallbackValue
+  []      -> fallbackValue
 
 {-| Just like take, except return the given fallback value if we reach the end of input, rather than the default EndOfInputBeforeResultReached -}
-takeWithFallbackValue: LexemeEater input opinion intermediate -> ParserResult input output -> ContinuationParser input intermediate opinion output
-takeWithFallbackValue lexemeEater fallbackValue continuation input = take' [] lexemeEater fallbackValue continuation input
+takeWithFallbackValueInternal: TakerOptions preTransformInput input opinion intermediate -> LexemeEater preTransformInput opinion intermediate -> ParserResult input output -> ContinuationParser input intermediate opinion output
+takeWithFallbackValueInternal takerOptions lexemeEater fallbackValue continuation input = take' takerOptions [] lexemeEater fallbackValue continuation input
 
 {- Trampolining -}
 {-| Create a thunk with id "" -}

@@ -6,7 +6,7 @@ module Parsers.ContinuationParser.Specifics.Lexemes where
 This module provides useful generic LexemeEaters.
 
 # LexemeEaters
-@docs whitespace, comment, int, float, symbol, escapedChar
+@docs whitespace, tillEndOfLine, comment, int, float, symbol, escapedChar
 
 # Building LexemeEaters
 @docs positionMarkedCharset
@@ -21,45 +21,42 @@ import Char
 import open Parsers.CharacterClassification
 import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
-import open Parsers.ContinuationParser.PositionMarking
-
-
-{-| This is not a LexemeEater, it is just a nice utility function. -}
-positionMarkedCharset: (char -> Bool) -> LexemeEater (PositionMarked char) char [char]
-positionMarkedCharset test = handlePositionMarkedInput <| charset test
 
 {-| Eats any kind of whitespace. -}
-whitespace: LexemeEater (PositionMarked Char) Char [Char]
-whitespace = positionMarkedCharset isWhitespace
+whitespace: LexemeEater  Char Char [Char]
+whitespace = charset isWhitespace
 
 {-| Eats untill it gets to a newline, good for one line comments -}
-comment: LexemeEater (PositionMarked Char) Char [Char]
-comment = positionMarkedCharset (\c->c/='\n')
+comment: LexemeEater Char Char [Char]
+comment = tillEndOfLine
 
+{-| Eats untill it gets to a newline -}
+tillEndOfLine: LexemeEater Char Char [Char]
+tillEndOfLine = charset (\c->c/='\n')
 
 {-| Eats a Int style number:
 
 Any decimal digit
 
 -}
-int: LexemeEater (PositionMarked Char) Char Int
-int = handlePositionMarkedInput <| lexemeMaybe (\c->Char.isDigit c) (String.toInt . String.fromList)
+int: LexemeEater Char Char Int
+int = lexemeMaybe (\c->Char.isDigit c) (String.toInt . String.fromList)
 
 {-| Eats a Float style number:
 
 Any digit or the '.' character
 
 -}
-float: LexemeEater (PositionMarked Char) Char Float
-float = handlePositionMarkedInput <| lexemeMaybe (\c->Char.isDigit c||c=='.') (String.toFloat . String.fromList)
+float: LexemeEater Char Char Float
+float = lexemeMaybe (\c->Char.isDigit c||c=='.') (String.toFloat . String.fromList)
 
 {-|
 
 This eats untill it reaches punctuation of your choice.  It then converts what it's eaten to a String.
 
  -}
-symbol: (Char -> Bool) -> LexemeEater (PositionMarked Char) Char String
-symbol punctuationTest = handlePositionMarkedInput (symbol' punctuationTest)
+symbol: (Char -> Bool) -> LexemeEater Char Char String
+symbol punctuationTest = symbol' punctuationTest
 symbol' punctuationTest = lexeme (not . punctuationTest) String.fromList
 
 {-|
@@ -67,28 +64,28 @@ symbol' punctuationTest = lexeme (not . punctuationTest) String.fromList
 This eats untill it reaches a quotation mark or a backslash.  AKA, it eats the easilly digestible parts of a string.
 
 -}
-normalStringSegment: LexemeEater (PositionMarked Char) Char [Char]
-normalStringSegment = positionMarkedCharset (\c-> c/='\"' && c/= '\\')
+normalStringSegment: LexemeEater Char Char [Char]
+normalStringSegment = charset (\c-> c/='\"' && c/= '\\')
 
 {-|
 
 This eats a single character and then maps it to any associated escape sequence.  AKA 'n' becomes '/n'.
 
 -}
-escapedChar: LexemeEater (PositionMarked Char) Char Char
+escapedChar: LexemeEater Char Char Char
 escapedChar acc input =
  case acc of
   [] -> IncompleteLexeme
   (escaped::[]) ->
    let
     output =
-     if | escaped.char == 't' -> '\t'
-        | escaped.char == 'n' -> '\n'
-        | escaped.char == 'r' -> '\r'
-        | escaped.char == '0' -> '\0'      
-        | otherwise -> escaped.char
+     if | escaped == 't' -> '\t'
+        | escaped == 'n' -> '\n'
+        | escaped == 'r' -> '\r'
+        | escaped == '0' -> '\0'      
+        | otherwise -> escaped
    in
-   EatenLexeme {lexeme=output,transition=input.char}
+   EatenLexeme {lexeme=output,transition=input}
 
 {-
 The continuation parser

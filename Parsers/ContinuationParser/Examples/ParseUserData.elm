@@ -1,4 +1,4 @@
-module  Parsers.ContinuationParser.Examples.ParseUserDataWithLineNumbers where
+module  Parsers.ContinuationParser.Examples.ParseUserData where
 
 import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
@@ -6,6 +6,8 @@ import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.Specifics.Lexemes
 
 import String
+
+t = standardTaker
 
 type UserData = {name:String,location:String,occupation:String}
 
@@ -18,32 +20,28 @@ parseUserData unparsed
 
 parseUserData': Parser (PositionMarked Char) UserData
 parseUserData' =
- take nameField <| \ _ _ ->
+ t.take nameField <| \ _ _ ->
+ t.take tillEndOfLineUnpadded <| \ name _ ->
  fastforward 1 <|
- take tillEndOfLineUnpadded <| \ name _ ->
+ t.take locationField <| \ _ _ ->
+ t.take tillEndOfLineUnpadded <| \ location _ ->
  fastforward 1 <|
- take locationField <| \ _ _ ->
- fastforward 1 <|
- take tillEndOfLineUnpadded <| \ location _ ->
- fastforward 1 <|
- take occupationField <| \ _ _ ->
- fastforward 1 <|
- take tillEndOfLineUnpadded <| \ occupation _ ->
+ t.take occupationField <| \ _ _ ->
+ t.take tillEndOfLineUnpadded <| \ occupation _ ->
  tillEndOfInput
   (Parsed
    {name=name
    ,location=location
    ,occupation=occupation})
-  <| take whitespace
+  <| t.take whitespace
   <| \ _ transition input ->
    parseErrorAts ("Unexpected input "++(show transition)++" near end of file.") input
 
-field: String -> LexemeEater (PositionMarked Char) Char [Char]
-field name = handlePositionMarkedInput <| keyword (String.toList name) (\c->c==':')
+field: String -> LexemeEater Char Char [Char]
+field name = exactMatch (String.toList name)
 nameField = field "Name"
 locationField = field "Location"
 occupationField = field "Occupation"
 
 tillEndOfLineUnpadded
- =  handlePositionMarkedInput
- <| lexeme (\c->c/='\n') (String.trim . String.fromList)
+ =  lexeme (\c->c/='\n') (String.trim . String.fromList)

@@ -8,6 +8,9 @@ This file provides the basic functionality for generating error messages with li
 # Types
 @docs PositionMarked
 
+# Constants
+@docs standardTaker, standardTakerOptions
+
 # Functions
 @docs charsToPositionMarkedChars, handlePositionMarkedInput, parseErrorAt, parseErrorAts, errorAt, errorAts, markEndOfInputAsErrorAt, markEndOfInputAsError
 
@@ -20,13 +23,19 @@ type PositionMarked char =
  ,column: Int
  ,char: char}
 
+standardTakerOptions: TakerOptions char (PositionMarked char) opinion output
+standardTakerOptions =
+ {lexemeEaterTransform = handlePositionMarkedInput}
+standardTaker: Taker char (PositionMarked char) intermediate opinion output
+standardTaker = newTaker standardTakerOptions
+
 charsToPositionMarkedChars: [Char] -> [PositionMarked Char]
 charsToPositionMarkedChars chars = (\(acc,_,_) -> reverse acc) <|  foldl charToPositionMarkedChar ([],0,0) chars
 charToPositionMarkedChar char (acc,line,col) =
     if | char == '\n' -> ({line=line,column=col,char=char} :: acc,line+1,0)
        | otherwise ->    ({line=line,column=col,char=char} :: acc,line,col+1)
 
-handlePositionMarkedInput: LexemeEater char char output -> LexemeEater (PositionMarked char) char output
+handlePositionMarkedInput: LexemeEater char opinion output -> LexemeEater (PositionMarked char) opinion output
 handlePositionMarkedInput unmarkedLexemeEater =
  (\acc input ->
    let

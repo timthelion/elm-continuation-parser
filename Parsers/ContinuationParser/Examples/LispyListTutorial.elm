@@ -15,7 +15,6 @@ import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter2 as Chapter
 import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter3 as Chapter3
 import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter4 as Chapter4
 import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter5 as Chapter5
-import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter6 as Chapter6
 
 tableOfContents = [markdown|
 # The continuation parser ([download/source](https://github.com/timthelion/elm-continuation-parser))
@@ -24,16 +23,13 @@ tableOfContents = [markdown|
 
  - Chapter 1 - The basic types
  - Chapter 2 - Our first parser
- - Chapter 3 - Adding line numbers to our error messages
- - Chapter 4 - Parsing LISP
- - Chapter 5 - Trampolining
- - Chapter 6 - Conclusion
+ - Chapter 3 - Parsing LISP
+ - Chapter 4 - Trampolining
+ - Chapter 5 - Conclusion
 |]
 
-main = (\ userDataWithoutLineNumbersField
-          userDataWithoutLineNumbersOutput
-          userDataWithLineNumbersField
-          userDataWithLineNumbersOutput
+main = (\ userDataField
+          userDataOutput
           lispyListParserWithoutTrampoliningField
           lispyListParserWithoutTrampoliningOutput
           lispyListParserField
@@ -41,27 +37,22 @@ main = (\ userDataWithoutLineNumbersField
            ->flow down
  [tableOfContents
  ,Chapter1.basicTypes
- ,Chapter2.userDataWithoutLineNumbers
- ,userDataWithoutLineNumbersField
- ,userDataWithoutLineNumbersOutput
- ,Chapter3.userDataWithLineNumbers
- ,userDataWithLineNumbersField
- ,userDataWithLineNumbersOutput
- ,Chapter4.parsingLispyLists
+ ,Chapter2.userData
+ ,userDataField
+ ,userDataOutput
+ ,Chapter3.parsingLispyLists
  ,lispyListParserWithoutTrampoliningField
  ,lispyListParserWithoutTrampoliningOutput
- ,Chapter5.trampolining
+ ,Chapter4.trampolining
  ,lispyListParserField
  ,lispyListParserOutput
- ,Chapter6.conclusion])
- <~ Chapter2.userDataWithoutLineNumbersField
- ~  Chapter2.userDataWithoutLineNumbersOutput
- ~  Chapter3.userDataWithLineNumbersField
- ~  Chapter3.userDataWithLineNumbersOutput
- ~  Chapter4.lispyListParserWithoutTrampoliningField
- ~  Chapter4.lispyListParserWithoutTrampoliningOutput
- ~  Chapter5.lispyListParserField
- ~  Chapter5.lispyListParserOutput
+ ,Chapter5.conclusion])
+ <~ Chapter2.userDataField
+ ~  Chapter2.userDataOutput
+ ~  Chapter3.lispyListParserWithoutTrampoliningField
+ ~  Chapter3.lispyListParserWithoutTrampoliningOutput
+ ~  Chapter4.lispyListParserField
+ ~  Chapter4.lispyListParserOutput
 
 {-
 The continuation parser

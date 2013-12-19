@@ -21,6 +21,8 @@ import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.Specifics.Lexemes
 import open Lazy
 
+t = standardTaker
+
 takeString: ContinuationParser (PositionMarked Char) String Char output
 takeString = 
  takeString' []
@@ -29,10 +31,10 @@ takeString =
 takeString': [Char] -> ContinuationParser (PositionMarked Char) String Char output
 takeString' acc continuation input =
  input |>
-  (take normalStringSegment <| \ segment transition ->
+  (t.take normalStringSegment <| \ segment transition ->
    if | transition == '\\' ->
           fastforward 1
-       <| take escapedChar
+       <| t.take escapedChar
        <| \ escaped _ -> takeString' (acc++ segment ++ [escaped]) continuation
 
       | transition == '\"' ->

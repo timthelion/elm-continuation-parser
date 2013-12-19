@@ -24,6 +24,8 @@ data LispyList
  | Number Float
  | LispyString String
 
+t = standardTaker
+
 parseLispyListFile: String ->  ParserResult (PositionMarked Char) [LispyList]
 parseLispyListFile input
  = parse
@@ -34,11 +36,11 @@ parseTopLevelLispyLists:
     [LispyList]
  -> Parser (PositionMarked Char) [LispyList]
 parseTopLevelLispyLists acc =
-      takeWithFallbackValue whitespace (Parsed acc)
+      t.takeWithFallbackValue whitespace (Parsed acc)
    <| \ whitespace' transition ->
    if | transition == ';' ->
             fastforward 1
-         <| takeWithFallbackValue comment (Parsed acc)
+         <| t.takeWithFallbackValue comment (Parsed acc)
          <| \ _ _ -> parseTopLevelLispyLists acc
 
       | transition == '(' ->
@@ -55,10 +57,10 @@ takeLispyList continuation = takeLispyList' [] continuation
  
 takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList Char [LispyList]
 takeLispyList' acc continuation =
-  take whitespace <| \ _ transition ->
+  t.take whitespace <| \ _ transition ->
    if | transition == ';' ->
           fastforward 1
-       <| take comment
+       <| t.take comment
        <| \ _ _ -> takeLispyList' acc continuation
 
       | transition == '\"' ->
@@ -76,10 +78,10 @@ takeLispyList' acc continuation =
        <| createSimpleContinuationThunk <| continuation (List acc) ')'
 
       | Char.isDigit transition ->
-          take float
+          t.take float
        <| \ number' _ -> takeLispyList' (acc++[Number number']) continuation
 
-      | otherwise -> take
+      | otherwise -> t.take
           lispySymbol
        <| \ symbol _ -> takeLispyList' (acc++[Symbol symbol]) continuation
 
