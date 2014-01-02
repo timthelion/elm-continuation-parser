@@ -29,6 +29,11 @@ The Taker object contains the following functions:
 ## Functions
 @docs createSimpleContinuationThunk, createContinuationThunk, evaluateContinuations, evaluateContinuationsTill
 -}
+{- base imports -}
+import Trampoline
+import Either
+
+{- internal modules -}
 import open Lazzy
 
 {- Fundamentals -}
@@ -145,18 +150,20 @@ createContinuationThunk id parser input =
 {-| Evaluate all thunks returning a fully evaluated ParserResult -}
 evaluateContinuations: ParserResult input output -> ParserResult input output
 evaluateContinuations result =
+ Trampoline.trampoline result <| \ result ->
  case result of
-  Continue value ->  evaluateContinuations <| evaluate value.continuation
-  _ -> result
+  Continue value ->  Either.Left <| evaluate value.continuation
+  _ -> Either.Right result
 
 {-| Evaluate all thunks untill a thunk with the given id is reached. Then return it, unevaluated. -}
 evaluateContinuationsTill: String -> ParserResult input output -> ParserResult input output
 evaluateContinuationsTill id result =
+ Trampoline.trampoline result <| \ result ->
  case result of
   Continue value ->
-   if | value.id == id -> Continue value
-      | otherwise -> evaluateContinuationsTill id <| evaluate value.continuation
-  _ -> result
+   if | value.id == id -> Either.Right <| Continue value
+      | otherwise -> Either.Left <| evaluate value.continuation
+  _ -> Either.Right result
 
 {-
 The continuation parser
