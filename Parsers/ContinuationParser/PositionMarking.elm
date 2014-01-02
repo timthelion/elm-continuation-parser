@@ -63,7 +63,7 @@ errorAts message input =
   (location::_) -> errorAt message location
   [] -> message ++ "\n    At end of input"
 
-markEndOfInputAsErrorAt: ContinuationParser (PositionMarked input) intermediate opinion output -> String -> (Continuation (PositionMarked input) intermediate opinion output) -> Parser (PositionMarked input) output
+markEndOfInputAsErrorAt: ContinuationParser (PositionMarked input) intermediate opinion output -> String -> ContinuationParser (PositionMarked input) intermediate opinion output
 markEndOfInputAsErrorAt continuationparser message continuation' input =
  let
   continuationId = errorAts message input
