@@ -1,6 +1,6 @@
 module  Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter3 where
 
-import Parsers.ContinuationParser.Examples.LispyListParserWithoutTrampolining as LispyListParserWithoutTrampolining
+import Parsers.ContinuationParser.Examples.LispyListParser as LispyListParserWithoutTrampolining
 
 import Parsers.ContinuationParser.Examples.FieldExtras as FieldExtras
 
