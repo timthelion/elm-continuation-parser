@@ -63,7 +63,7 @@ parse input parser =
 {-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
 tillEndOfInput: ParserResult input output -> Parser input ignoredOutput -> Parser input output
 tillEndOfInput result parser input =
- case parser input of
+ case evaluateContinuations <| parser input of
   EndOfInputBeforeResultReached -> result
   ParseError err -> ParseError err
   Parsed _ -> {- This shouldn't happen -} ParseError "Programmer error: End of input parsers should not return a result."
