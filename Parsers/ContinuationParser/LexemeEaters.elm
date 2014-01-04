@@ -13,10 +13,10 @@ import String
 import List
 
 {-| Eat anything that passes the test. -}
-charset: (char -> Bool) -> LexemeEater char char [char]
+charset: (char -> Bool) -> LexemeEater char [char]
 charset test acc input =
  if | test input -> IncompleteLexeme
-    | otherwise -> EatenLexeme {lexeme=acc,transition=input}
+    | otherwise -> EatenLexeme acc
 
 {-| Eat anything that matches the list.  This function takes two parameters:
 
@@ -24,10 +24,10 @@ charset test acc input =
  - The punctuation test
 
 All keywords must end in punctuation.  Otherwise we would end up in the situation that "assumption" would match the keyword "as". -}
-keyword: [Char] -> (Char->Bool) -> LexemeEater Char Char [Char]
+keyword: [Char] -> (Char->Bool) -> LexemeEater Char [Char]
 keyword word punctuationTest acc input =
  if | punctuationTest input ->
-       (if | acc == word -> EatenLexeme {lexeme=acc,transition=input}
+       (if | acc == word -> EatenLexeme acc
            | otherwise ->
               LexemeError <| "Incomplete keyword: Got \""
                               ++ (String.fromList acc)
@@ -54,54 +54,55 @@ isSuffixOf suffix list =
  isPrefixOf (reverse suffix) (reverse list)
 
 {-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value -}
-lexeme: (char -> Bool) -> ([char] -> output) -> LexemeEater char char output
+lexeme: (char -> Bool) -> ([char] -> output) -> LexemeEater char output
 lexeme test conversion =
  convertOutput conversion (charset test)
 
 {-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value.  If the conversion function returns Nothing, throw a parse error.-}
-lexemeMaybe: (char -> Bool) -> ([char] -> Maybe output) -> LexemeEater char char output
+lexemeMaybe: (char -> Bool) -> ([char] -> Maybe output) -> LexemeEater char output
 lexemeMaybe test conversion =
  convertOutputMaybe conversion (charset test)
 
 {-| Convert the output of a LexemeEater using the given conversion funciton -}
-convertOutput: (output -> convertedOutput) -> LexemeEater char opinion output -> LexemeEater char opinion convertedOutput
+convertOutput: (output -> convertedOutput) -> LexemeEater char output -> LexemeEater char convertedOutput
 convertOutput conversion eater acc input =
  case (eater acc input) of
-  EatenLexeme el -> EatenLexeme {lexeme=conversion el.lexeme
-                                ,transition=el.transition}
+  EatenLexeme el -> EatenLexeme <| conversion el
   LexemeError err -> LexemeError err
   IncompleteLexeme -> IncompleteLexeme
 
 {-| Try to convert the output of the given lexeme eater.  If the conversion conversion fails(returns Nothing), report an error. -}
-convertOutputMaybe: (output -> Maybe convertedOutput) -> LexemeEater char transition output -> LexemeEater char transition convertedOutput
+convertOutputMaybe: (output -> Maybe convertedOutput) -> LexemeEater char output -> LexemeEater char convertedOutput
 convertOutputMaybe conversion eater acc input =
  case eater acc input of
   EatenLexeme el ->
-   case conversion (el.lexeme) of
-    Just output -> EatenLexeme {lexeme=output,transition=el.transition}
+   case conversion el of
+    Just output -> EatenLexeme output
     Nothing -> LexemeError <| "Lexeme "++(show acc)++"failed to parse."
   LexemeError err -> LexemeError err
   IncompleteLexeme -> IncompleteLexeme
 
 {-| Eat untill the condition is met.  The condition takes the currently consumed input and returns a Bool. -}
-untill: ([char]->Bool) -> LexemeEater char char [char]
+untill: ([char]->Bool) -> LexemeEater char [char]
 untill test acc input =
- if | test acc  -> EatenLexeme {lexeme=acc,transition=input}
+ if | test acc  -> EatenLexeme acc
     | otherwise -> IncompleteLexeme
 
 {-| Eat untill the given marker(list segment) is reached, then return the eaten contents except for the segment. -}
-untillMarker: [char] -> LexemeEater char char [char]
+untillMarker: [char] -> LexemeEater char [char]
 untillMarker marker acc input =
  case untill (\acc -> isSuffixOf marker acc) acc input of
-  EatenLexeme le -> EatenLexeme {lexeme=take (length le.lexeme - length marker) le.lexeme
-                                ,transition=le.transition}
+  EatenLexeme le -> EatenLexeme <| take (length le - length marker) le
   IncompleteLexeme -> IncompleteLexeme
  
-exactMatch: [char] -> LexemeEater char char [char]
+exactMatch: [char] -> LexemeEater char [char]
 exactMatch patern acc input =
- if | acc == patern -> EatenLexeme {lexeme=patern,transition=input}
+ if | acc == patern -> EatenLexeme patern
     | isPrefixOf acc patern -> IncompleteLexeme
     | otherwise -> LexemeError <| "Unexpected input:" ++ show input
+
+exactStringMatch: String -> LexemeEater Char [Char]
+exactStringMatch s = exactMatch (String.toList s)
 
 {-
 The continuation parser

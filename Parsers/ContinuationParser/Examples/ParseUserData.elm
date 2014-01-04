@@ -21,24 +21,25 @@ parseUserData unparsed
 
 parseUserData': Parser (PositionMarked Char) UserData
 parseUserData' =
- t.take nameField <| \ _ _ ->
- t.take tillEndOfLineUnpadded <| \ name _ ->
+ t.take nameField <| \ _ ->
+ t.take tillEndOfLineUnpadded <| \ name ->
  fastforward 1 <|
- t.take locationField <| \ _ _ ->
- t.take tillEndOfLineUnpadded <| \ location _ ->
+ t.take locationField <| \ _ ->
+ t.take tillEndOfLineUnpadded <| \ location ->
  fastforward 1 <|
- t.take occupationField <| \ _ _ ->
- t.take tillEndOfLineUnpadded <| \ occupation _ ->
+ t.take occupationField <| \ _ ->
+ t.take tillEndOfLineUnpadded <| \ occupation ->
  tillEndOfInput
   (Parsed
    {name=name
    ,location=location
    ,occupation=occupation})
   <| t.take whitespace
-  <| \ _ transition input ->
-   parseErrorAts ("Unexpected input "++(show transition)++" near end of file.") input
+  <| \ _ ->
+   t.lookAhead 1 <| \ notWhitespace input ->
+   parseErrorAts ("Unexpected input "++(show notWhitespace)++" near end of file.") input
 
-field: String -> LexemeEater Char Char [Char]
+field: String -> LexemeEater Char [Char]
 field name = exactMatch (String.toList name)
 nameField = field "Name"
 locationField = field "Location"

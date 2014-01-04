@@ -22,10 +22,12 @@ type PositionMarked char =
  ,column: Int
  ,char: char}
 
-standardTakerOptions: TakerOptions char (PositionMarked char) opinion output
+standardTakerOptions: TakerOptions char (PositionMarked char) output
 standardTakerOptions =
- {lexemeEaterTransform = handlePositionMarkedInput}
-standardTaker: Taker char (PositionMarked char) intermediate opinion output
+ {lexemeEaterTransform = handlePositionMarkedInput
+ ,inputTransform = unmark}
+
+standardTaker: Taker char (PositionMarked char) intermediate output
 standardTaker = newTaker standardTakerOptions
 
 charsToPositionMarkedChars: [Char] -> [PositionMarked Char]
@@ -34,11 +36,14 @@ charToPositionMarkedChar char (acc,line,col) =
     if | char == '\n' -> ({line=line,column=col,char=char} :: acc,line+1,0)
        | otherwise ->    ({line=line,column=col,char=char} :: acc,line,col+1)
 
-handlePositionMarkedInput: LexemeEater char opinion output -> LexemeEater (PositionMarked char) opinion output
+unmark: [PositionMarked char] -> [char]
+unmark = map (.char)
+
+handlePositionMarkedInput: LexemeEater char output -> LexemeEater (PositionMarked char) output
 handlePositionMarkedInput unmarkedLexemeEater =
  (\acc input ->
    let
-    unmarkedAcc = map (.char) acc
+    unmarkedAcc = unmark acc
     unmarkedInput = input.char
    in
    case unmarkedLexemeEater unmarkedAcc unmarkedInput of
@@ -63,13 +68,13 @@ errorAts message input =
   (location::_) -> errorAt message location
   [] -> message ++ "\n    At end of input"
 
-markEndOfInputAsErrorAt: ContinuationParser (PositionMarked input) intermediate opinion output -> String -> ContinuationParser (PositionMarked input) intermediate opinion output
+markEndOfInputAsErrorAt: ContinuationParser (PositionMarked input) intermediate output -> String -> ContinuationParser (PositionMarked input) intermediate output
 markEndOfInputAsErrorAt continuationparser message continuation' input =
  let
   continuationId = errorAts message input
-  --continuation: Continuation input intermediate opinion output
-  continuation intermediate opinion input' =
-     createContinuationThunk continuationId (continuation' intermediate opinion) input'
+  --continuation: Continuation input intermediate output
+  continuation intermediate input' =
+     createContinuationThunk continuationId (continuation' intermediate) input'
  in
  case  evaluateContinuationsTill continuationId <| continuationparser continuation input of
   EndOfInputBeforeResultReached ->

@@ -7,7 +7,7 @@ module Parsers.ContinuationParser.Specifics.ContinuationParsers where
 {-|
 This module provides generally usefull ContinuationParsers
 
-@docs takeString
+@docs takeString, comment, escapedChar
 -}
 
 {- Base libraries -}
@@ -22,23 +22,32 @@ import open Parsers.ContinuationParser.Specifics.Lexemes
 
 t = standardTaker
 
-takeString: ContinuationParser (PositionMarked Char) String Char output
-takeString = 
- takeString' []
- `markEndOfInputAsErrorAt` "Matching quote not found for string."
+takeString: ContinuationParser (PositionMarked Char) String output
+takeString continuation =
+ t.take (exactMatch ['\"']) <| \ _ ->
+ (takeString' []
+ `markEndOfInputAsErrorAt` "Matching quote not found for string.") continuation
 
-takeString': [Char] -> ContinuationParser (PositionMarked Char) String Char output
-takeString' acc continuation input =
- input |>
-  (t.take normalStringSegment <| \ segment transition ->
-   if | transition == '\\' ->
-          fastforward 1
-       <| t.take escapedChar
-       <| \ escaped _ -> takeString' (acc++ segment ++ [escaped]) continuation
+takeString': [Char] -> ContinuationParser (PositionMarked Char) String output
+takeString' acc continuation =
+  t.take normalStringSegment <| \ segment ->
+        (escapedChar
+   <| \ escaped -> takeString' (acc++ segment ++ [escaped]) continuation
+                          <|>
+             (t.take (exactMatch ['\"'])
+   <| \ _ -> continuation (String.fromList <| acc ++ segment)))
 
-      | transition == '\"' ->
-            fastforward 1
-         <| continuation (String.fromList <| acc ++ segment) '\"')
+{-| Eats a C style escaped character.  Aka "\n" becomes newline -}
+escapedChar: ContinuationParser (PositionMarked Char) Char output
+escapedChar continuation =
+ t.take (exactMatch ['\\']) <| \ _ ->
+ t.take escapedChar' continuation
+
+{-| Eats a single line comment -}
+comment: String -> ContinuationParser (PositionMarked Char) [Char] output
+comment marker continuation =
+ t.take (exactStringMatch marker) <| \ _ ->
+ t.take tillEndOfLine continuation
 
 {-
 The continuation parser

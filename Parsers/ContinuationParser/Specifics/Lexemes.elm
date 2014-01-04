@@ -6,7 +6,7 @@ module Parsers.ContinuationParser.Specifics.Lexemes where
 This module provides useful generic LexemeEaters.
 
 # LexemeEaters
-@docs whitespace, tillEndOfLine, comment, int, float, symbol, escapedChar
+@docs whitespace, tillEndOfLine, int, float, symbol
 
 -}
 {- Basic libraries -}
@@ -19,15 +19,11 @@ import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
 
 {-| Eats any kind of whitespace. -}
-whitespace: LexemeEater  Char Char [Char]
+whitespace: LexemeEater  Char [Char]
 whitespace = charset isWhitespace
 
-{-| Eats untill it gets to a newline, good for one line comments -}
-comment: LexemeEater Char Char [Char]
-comment = tillEndOfLine
-
 {-| Eats untill it gets to a newline -}
-tillEndOfLine: LexemeEater Char Char [Char]
+tillEndOfLine: LexemeEater Char [Char]
 tillEndOfLine = charset (\c->c/='\n')
 
 {-| Eats a Int style number:
@@ -35,7 +31,7 @@ tillEndOfLine = charset (\c->c/='\n')
 Any decimal digit
 
 -}
-int: LexemeEater Char Char Int
+int: LexemeEater Char Int
 int = lexemeMaybe (\c->Char.isDigit c) (String.toInt . String.fromList)
 
 {-| Eats a Float style number:
@@ -43,7 +39,7 @@ int = lexemeMaybe (\c->Char.isDigit c) (String.toInt . String.fromList)
 Any digit or the '.' character
 
 -}
-float: LexemeEater Char Char Float
+float: LexemeEater Char Float
 float = lexemeMaybe (\c->Char.isDigit c||c=='.') (String.toFloat . String.fromList)
 
 {-|
@@ -51,7 +47,7 @@ float = lexemeMaybe (\c->Char.isDigit c||c=='.') (String.toFloat . String.fromLi
 This eats untill it reaches punctuation of your choice.  It then converts what it's eaten to a String.
 
  -}
-symbol: (Char -> Bool) -> LexemeEater Char Char String
+symbol: (Char -> Bool) -> LexemeEater Char String
 symbol punctuationTest = symbol' punctuationTest
 symbol' punctuationTest = lexeme (not . punctuationTest) String.fromList
 
@@ -60,7 +56,7 @@ symbol' punctuationTest = lexeme (not . punctuationTest) String.fromList
 This eats untill it reaches a quotation mark or a backslash.  AKA, it eats the easilly digestible parts of a string.
 
 -}
-normalStringSegment: LexemeEater Char Char [Char]
+normalStringSegment: LexemeEater Char [Char]
 normalStringSegment = charset (\c-> c/='\"' && c/= '\\')
 
 {-|
@@ -68,8 +64,8 @@ normalStringSegment = charset (\c-> c/='\"' && c/= '\\')
 This eats a single character and then maps it to any associated escape sequence.  AKA 'n' becomes '/n'.
 
 -}
-escapedChar: LexemeEater Char Char Char
-escapedChar acc input =
+escapedChar': LexemeEater Char Char
+escapedChar' acc input =
  case acc of
   [] -> IncompleteLexeme
   (escaped::[]) ->
@@ -81,7 +77,7 @@ escapedChar acc input =
         | escaped == '0' -> '\0'      
         | otherwise -> escaped
    in
-   EatenLexeme {lexeme=output,transition=input}
+   EatenLexeme output
 
 {-
 The continuation parser

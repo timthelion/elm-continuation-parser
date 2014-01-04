@@ -37,54 +37,33 @@ parseTopLevelLispyLists:
  -> Parser (PositionMarked Char) [LispyList]
 parseTopLevelLispyLists acc =
       t.takeWithFallbackValue whitespace (Parsed acc)
-   <| \ whitespace' transition ->
-   if | transition == ';' ->
-            fastforward 1
-         <| t.takeWithFallbackValue comment (Parsed acc)
-         <| \ _ _ -> parseTopLevelLispyLists acc
+   <| \ whitespace' ->
+              (tillEndOfInput (Parsed acc) (comment ";"
+     <| \ _ -> parseTopLevelLispyLists acc)
+                   <|>
+           (takeLispyList `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block."
+         <| \ list -> parseTopLevelLispyLists (acc++[list])))
 
-      | transition == '(' ->
-            fastforward 1
-         <|  takeLispyList `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block."
-         <| \ list _ ->
-           parseTopLevelLispyLists (acc++[list])
-
-      | otherwise ->
-         (\input -> parseErrorAts  ("Unexpected input:" ++ (show transition)) input)
-
-takeLispyList: ContinuationParser (PositionMarked Char) LispyList Char [LispyList]
-takeLispyList continuation = takeLispyList' [] continuation
+takeLispyList: ContinuationParser (PositionMarked Char) LispyList [LispyList]
+takeLispyList continuation =
+ t.take (exactMatch ['(']) <| \ _ ->
+ takeLispyList' [] continuation
  
-takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList Char [LispyList]
+takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList [LispyList]
 takeLispyList' acc continuation =
-  t.take whitespace <| \ _ transition ->
-   if | transition == ';' ->
-          fastforward 1
-       <| t.take comment
-       <| \ _ _ -> takeLispyList' acc continuation
-
-      | transition == '\"' ->
-          fastforward 1
-       <| takeString
-       <| \ string _ -> takeLispyList' (acc++[LispyString string]) continuation
-
-      | transition == '(' ->
-          fastforward 1
-       <| takeLispyList
-       <| \ list _ -> takeLispyList' (acc++[list]) continuation
-
-      | transition == ')' ->
-          fastforward 1
-       <| createSimpleContinuationThunk <| continuation (List acc) ')'
-
-      | Char.isDigit transition ->
-          t.take float
-       <| \ number' _ -> takeLispyList' (acc++[Number number']) continuation
-
-      | otherwise -> t.take
-          lispySymbol
-       <| \ symbol _ -> takeLispyList' (acc++[Symbol symbol]) continuation
-
+  t.take whitespace <| \ _ ->
+   ((comment ";"
+       <| \ _ -> takeLispyList' acc continuation) 
+   <|> (takeString
+       <| \ string -> takeLispyList' (acc++[LispyString string]) continuation)
+   <|> (takeLispyList
+       <| \ list -> takeLispyList' (acc++[list]) continuation)
+   <|> (t.take (exactMatch [')'])
+       <| \ _ -> createSimpleContinuationThunk <| continuation (List acc))
+   <|> (t.take float
+       <| \ number' -> takeLispyList' (acc++[Number number']) continuation)
+   <|> (t.take lispySymbol
+       <| \ symbol -> takeLispyList' (acc++[Symbol symbol]) continuation))
 
 lispySymbol =
  symbol
