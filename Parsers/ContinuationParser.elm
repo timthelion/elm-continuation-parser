@@ -9,7 +9,7 @@ This module provides functions which operate on Parsers and ContinuationParsers(
 @docs parse, return, <|>
 
 # Seeking
-@docs fastforward, lookAhead
+@docs fastforward
 
 # Errors and end of input
 @docs tillEndOfInput
@@ -68,12 +68,7 @@ fastforward n parser input =
         (i::is) -> fastforward (n-1) parser is
         [] -> EndOfInputBeforeResultReached
 
-{-| Look ahead n characters/items/tokens in the input.   If near the end of input, returns a partial result.  Example:
 
-If you ask for 5 chars when the remaining input is ['b','y','e'] you get only 3 chars:  ['b','y','e']-}
-lookAheadInternal: Int -> ContinuationParser input [input] output
-lookAheadInternal n continuation input =
- continuation (take n input) input
 
 
 infixl 0 <|>

@@ -12,6 +12,7 @@ The Taker object contains the following functions:
 
  - take
  - takeWithFallbackValue
+ - lookAhead
 -}
 
 {- internal module imports -}
@@ -50,7 +51,6 @@ newTaker to =
  ,lookAhead n continuation input = lookAheadInternal n (\intermediate -> continuation <| to.inputTransform intermediate) input
  }
 
-
 takeInternal: TakerOptions preTransformInput input intermediate -> LexemeEater preTransformInput intermediate -> ContinuationParser input intermediate output
 takeInternal takerOptions lexemeEater continuation input = take' takerOptions [] lexemeEater EndOfInputBeforeResultReached continuation input
 
@@ -71,3 +71,10 @@ take' takerOptions acc lexemeEater fallbackValue continuation input =
 {-| Just like take, except return the given fallback value if we reach the end of input, rather than the default EndOfInputBeforeResultReached -}
 takeWithFallbackValueInternal: TakerOptions preTransformInput input intermediate -> LexemeEater preTransformInput intermediate -> ParserResult input output -> ContinuationParser input intermediate output
 takeWithFallbackValueInternal takerOptions lexemeEater fallbackValue continuation input = take' takerOptions [] lexemeEater fallbackValue continuation input
+
+{-| Look ahead n characters/items/tokens in the input.   If near the end of input, returns a partial result.  Example:
+
+If you ask for 5 chars when the remaining input is ['b','y','e'] you get only 3 chars:  ['b','y','e']-}
+lookAheadInternal: Int -> ContinuationParser input [input] output
+lookAheadInternal n continuation input =
+ continuation (take n input) input
