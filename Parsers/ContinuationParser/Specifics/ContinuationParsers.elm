@@ -51,6 +51,34 @@ comment marker continuation =
  t.take (exactStringMatch marker) <| \ _ ->
  t.take tillEndOfLine continuation
 
+{-|
+
+This eats untill it reaches a quotation mark or a backslash.  AKA, it eats the easilly digestible parts of a string.
+
+-}
+normalStringSegment: LexemeEater Char [Char]
+normalStringSegment = charset (\c-> c/='\"' && c/= '\\')
+
+{-|
+
+This eats a single character and then maps it to any associated escape sequence.  AKA 'n' becomes '/n'.
+
+-}
+escapedChar': LexemeEater Char Char
+escapedChar' acc input =
+ case acc of
+  [] -> IncompleteLexeme
+  (escaped::[]) ->
+   let
+    output =
+     if | escaped == 't' -> '\t'
+        | escaped == 'n' -> '\n'
+        | escaped == 'r' -> '\r'
+        | escaped == '0' -> '\0'
+        | otherwise -> escaped
+   in
+   EatenLexeme output
+
 {-
 The continuation parser
 Parsec inspired continuation passing style parser
