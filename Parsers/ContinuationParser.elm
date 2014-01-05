@@ -6,16 +6,16 @@ module Parsers.ContinuationParser where
 This module provides functions which operate on Parsers and ContinuationParsers(to be found int the Parsers.ContinuationParser.Types module).
 
 # Fundimentals
-@docs parse, return, <|>
+@docs parse, <|>, return
 
 # Seeking
 @docs fastforward
 
 # Errors and end of input
-@docs tillEndOfInput
+@docs tillEndOfInput, replaceEndOfInputWith, transformError
 
 # Continues
-@docs continue, evaluateContinues, evaluateContinuesTillEndOfBlock
+@docs continue, markAsEndOfBlock, evaluateContinues, evaluateContinuesTillEndOfBlock
 -}
 {- base imports -}
 import Trampoline
@@ -26,7 +26,7 @@ import Lazzy
 import Parsers.ContinuationParser.FinalParserResult as FinalParserResult
 import open Parsers.ContinuationParser.Types
 
-
+{- basic functions -}
 {-| This function should be run on any `Parser` from which you would like to create a usable result.  Think of running a parser with the `parse` function line running a monad.
 -}
 parse: [input] -> Parser input output -> FinalParserResult.FinalParserResult output
@@ -36,37 +36,6 @@ parse input parser =
   EndOfInputBeforeResultReached -> FinalParserResult.EndOfInputBeforeResultReached
   ParseError err -> FinalParserResult.ParseError err
   Parsed output -> FinalParserResult.Parsed output
-
-{-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
-tillEndOfInput: ParserResult input output -> Parser input ignoredOutput -> Parser input output
-tillEndOfInput result parser input =
- case evaluateContinues <| parser input of
-  EndOfInputBeforeResultReached -> result
-  ParseError err -> ParseError err
-  Parsed _ -> {- This shouldn't happen -} ParseError "Programmer error: End of input parsers should not return a result."
-
-replaceEndOfInputWith: ContinuationParser input intermediate output -> ParserResult input output -> ContinuationParser input intermediate output
-replaceEndOfInputWith continuationParser result continuation input =
- case evaluateContinuesTillEndOfBlock <| continuationParser (markAsEndOfBlock continuation) input of
-  EndOfInputBeforeResultReached -> result
-  Continue value -> Lazzy.evaluate value.continuation -- Evaluate end of block marker
-  otherCases -> otherCases
-
-markAsEndOfBlock: Continuation input intermediate output -> Continuation input intermediate output
-markAsEndOfBlock continuation intermediate = continue EndOfBlock <| continuation intermediate
-
-{-| Create a parser which ignores its input and returns the given result directly. -}
-return: ParserResult input output -> Parser input output
-return result _ = result
-
-{-| Remove a n characters/tokens from the input -}
-fastforward: Int -> Parser input output -> Parser input output
-fastforward n parser input =
- if | n == 0 -> parser input
-    | otherwise ->
-       case input of
-        (i::is) -> fastforward (n-1) parser is
-        [] -> EndOfInputBeforeResultReached
 
 infixl 0 <|>
 {-|
@@ -86,6 +55,39 @@ Notes:
  transformError (p1 input) <| \ err ->
  transformError (p2 input) <| \ _ -> err
 
+{-| Create a parser which ignores its input and returns the given result directly. -}
+return: ParserResult input output -> Parser input output
+return result _ = result
+
+{- seeking -}
+{-| Remove a n characters/tokens from the input -}
+fastforward: Int -> Parser input output -> Parser input output
+fastforward n parser input =
+ if | n == 0 -> parser input
+    | otherwise ->
+       case input of
+        (i::is) -> fastforward (n-1) parser is
+        [] -> EndOfInputBeforeResultReached
+
+{- errors and end of input -}
+{-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
+tillEndOfInput: ParserResult input output -> Parser input ignoredOutput -> Parser input output
+tillEndOfInput result parser input =
+ case evaluateContinues <| parser input of
+  EndOfInputBeforeResultReached -> result
+  ParseError err -> ParseError err
+  Parsed _ -> {- This shouldn't happen -} ParseError "Programmer error: End of input parsers should not return a result."
+
+{-|
+If the end of input is reached before a certain continuation parser goes onto its continuation, return the given ParserResult instead of EndOfInputBeforeResultReached.
+-}
+replaceEndOfInputWith: ContinuationParser input intermediate output -> ParserResult input output -> ContinuationParser input intermediate output
+replaceEndOfInputWith continuationParser result continuation input =
+ case evaluateContinuesTillEndOfBlock <| continuationParser (markAsEndOfBlock continuation) input of
+  EndOfInputBeforeResultReached -> result
+  Continue value -> Lazzy.evaluate value.continuation -- Evaluate end of block marker
+  otherCases -> otherCases
+
 {-| If the ParserResult is EndOfInputBeforeResultReached or ParseError apply the given function to that error. -}
 transformError: ParserResult input output -> (ParserResult input output -> ParserResult input output) -> ParserResult input output
 transformError result transformation =
@@ -101,6 +103,12 @@ continue ctype parser input =
  Continue
   {ctype=ctype
   ,continuation = Lazzy.computeLater parser input}
+
+{-|
+Mark a continuation as the end of a block.
+-}
+markAsEndOfBlock: Continuation input intermediate output -> Continuation input intermediate output
+markAsEndOfBlock continuation intermediate = continue EndOfBlock <| continuation intermediate
 
 {-| Evaluate all Continues returning a fully evaluated ParserResult -}
 evaluateContinues: ParserResult input output -> ParserResult input output
