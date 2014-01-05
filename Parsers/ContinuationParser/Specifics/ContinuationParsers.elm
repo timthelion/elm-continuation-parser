@@ -30,12 +30,12 @@ takeString continuation =
 
 takeString': [Char] -> ContinuationParser (PositionMarked Char) String output
 takeString' acc continuation =
-  t.take normalStringSegment <| \ segment ->
-        (escapedChar
-   <| \ escaped -> takeString' (acc++ segment ++ [escaped]) continuation
-                          <|>
-             (t.take (exactMatch ['\"'])
-   <| \ _ -> continuation (String.fromList <| acc ++ segment)))
+ t.take normalStringSegment <| \ segment ->
+  ((escapedChar <| \ escaped ->
+  takeString' (acc++ segment ++ [escaped]) continuation)
+               <|>
+  (t.take (exactMatch ['\"']) <| \ _ ->
+  continuation (String.fromList <| acc ++ segment)))
 
 {-| Eats a C style escaped character.  Aka "\n" becomes newline -}
 escapedChar: ContinuationParser (PositionMarked Char) Char output

@@ -98,7 +98,7 @@ untillMarker marker acc input =
 exactMatch: [char] -> LexemeEater char [char]
 exactMatch patern acc input =
  if | acc == patern -> EatenLexeme patern
-    | isPrefixOf acc patern -> IncompleteLexeme
+    | isPrefixOf (acc++[input]) patern -> IncompleteLexeme
     | otherwise -> LexemeError <| "Unexpected input:" ++ show input
 
 exactStringMatch: String -> LexemeEater Char [Char]

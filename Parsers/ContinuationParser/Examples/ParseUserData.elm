@@ -5,6 +5,7 @@ import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.Specifics.Lexemes
+import Parsers.ContinuationParser.FinalParserResult as FinalParserResult
 
 import String
 
@@ -12,7 +13,7 @@ t = standardTaker
 
 type UserData = {name:String,location:String,occupation:String}
 
-parseUserData: String -> ParserResult (PositionMarked Char) UserData
+parseUserData: String -> FinalParserResult.FinalParserResult UserData
 parseUserData unparsed
  =
  parse
@@ -40,7 +41,7 @@ parseUserData' =
    parseErrorAts ("Unexpected input "++(show notWhitespace)++" near end of file.") input
 
 field: String -> LexemeEater Char [Char]
-field name = exactMatch (String.toList name)
+field name = exactMatch (String.toList (name++":"))
 nameField = field "Name"
 locationField = field "Location"
 occupationField = field "Occupation"

@@ -27,7 +27,7 @@ The Taker object contains the following functions:
 
 # Trampolining
 ## Functions
-@docs createSimpleContinuationThunk, createContinuationThunk, evaluateContinuations, evaluateContinuationsTill
+@docs createSimpleContinuationThunk, createContinuationThunk, evaluateContinues, evaluateContinuesTill
 -}
 {- base imports -}
 import Trampoline
@@ -35,6 +35,7 @@ import Either
 
 {- internal modules -}
 import open Lazzy
+import Parsers.ContinuationParser.FinalParserResult as FinalParserResult
 
 {- Fundamentals -}
 type Parser input output = [input] -> ParserResult input output
@@ -44,7 +45,11 @@ data ParserResult input output
  = Parsed output
  | ParseError String
  | EndOfInputBeforeResultReached
- | Continue {id:String,continuation:Lazy [input] (ParserResult input output)}
+ | Continue {ctype:ContinueType,continuation:Lazy [input] (ParserResult input output)}
+
+data ContinueType
+ = Unambiguous
+ | EndOfBlock
 
 type Continuation input intermediate output
  = intermediate -> Parser input output
@@ -53,26 +58,38 @@ type ContinuationParser input intermediate output
  = (Continuation input intermediate output) -> Parser input output
 
 {-| This function should be run on any `Parser` from which you would like to create a usable result.  Think of running a parser with the `parse` function line running a monad.
-
-Note: The `ParserResult` returned will NEVER contain a `Continue`.
 -}
-parse: [input] -> Parser input output -> ParserResult input output
+parse: [input] -> Parser input output -> FinalParserResult.FinalParserResult output
 parse input parser =
- evaluateContinuations (parser input)
+ evaluateContinues (parser input) |> \ result -> 
+ case result of
+  EndOfInputBeforeResultReached -> FinalParserResult.EndOfInputBeforeResultReached
+  ParseError err -> FinalParserResult.ParseError err
+  Parsed output -> FinalParserResult.Parsed output
 
 {-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
 tillEndOfInput: ParserResult input output -> Parser input ignoredOutput -> Parser input output
 tillEndOfInput result parser input =
- case evaluateContinuations <| parser input of
+ case evaluateContinues <| parser input of
   EndOfInputBeforeResultReached -> result
   ParseError err -> ParseError err
   Parsed _ -> {- This shouldn't happen -} ParseError "Programmer error: End of input parsers should not return a result."
+
+replaceEndOfInputWith: ContinuationParser input intermediate output -> ParserResult input output -> ContinuationParser input intermediate output
+replaceEndOfInputWith continuationParser result continuation input =
+ case evaluateContinuesTillEndOfBlock <| continuationParser (markAsEndOfBlock continuation) input of
+  EndOfInputBeforeResultReached -> result
+  Continue value -> evaluate value.continuation -- Evaluate end of block marker
+  otherCases -> otherCases
+
+markAsEndOfBlock: Continuation input intermediate output -> Continuation input intermediate output
+markAsEndOfBlock continuation intermediate = continue EndOfBlock <| continuation intermediate
 
 {-| Create a parser which ignores its input and returns the given result directly. -}
 return: ParserResult input output -> Parser input output
 return result _ = result
 
-{-| Remove a single character/token from the input -}
+{-| Remove a n characters/tokens from the input -}
 fastforward: Int -> Parser input output -> [input] -> ParserResult input output
 fastforward n parser input =
  if | n == 0 -> parser input
@@ -84,8 +101,8 @@ fastforward n parser input =
 {-| Look ahead n characters/items/tokens in the input.   If near the end of input, returns a partial result.  Example:
 
 If you ask for 5 chars when the remaining input is ['b','y','e'] you get only 3 chars:  ['b','y','e']-}
-lookAhead': Int -> ContinuationParser input [input] output
-lookAhead' n continuation input =
+lookAheadInternal: Int -> ContinuationParser input [input] output
+lookAheadInternal n continuation input =
  continuation (take n input) input
 
 {- Lexemes -}
@@ -116,7 +133,7 @@ newTaker to =
  in
  {take=take
  ,takeWithFallbackValue=takeWithFallbackValue
- ,lookAhead n continuation input = lookAhead' n (\intermediate -> continuation <| to.inputTransform intermediate) input
+ ,lookAhead n continuation input = lookAheadInternal n (\intermediate -> continuation <| to.inputTransform intermediate) input
  }
 
 
@@ -130,7 +147,9 @@ take' takerOptions acc lexemeEater fallbackValue continuation input =
  in
  case input of
   (i::is) -> case lexemeEater' acc i of
-              EatenLexeme result -> createSimpleContinuationThunk (continuation result) (i::is)
+              EatenLexeme result ->
+               if | length acc > 0 -> continue Unambiguous (continuation result) (i::is)
+                  | otherwise -> continuation result (i::is) --TODO Be less naive about this...
               IncompleteLexeme -> take' takerOptions (acc++[i]) lexemeEater fallbackValue continuation is
               LexemeError err -> ParseError err
   []      -> fallbackValue
@@ -150,8 +169,7 @@ Whereas in parsec <|> is LL(1) by default in the elm continuation parser it is L
 
 Notes:
  - take returns Continue at the end of each lexeme by default, so the choice operator is satisfied after a lexeme is eaten.
- - You can do something similar to `try` by using evaluateContinuationsTill to evaluate Continues untill a given Continue id, thus preventing <|> from believing that the choice is unambiguous.
-  + Warning: evaluateContinuationsTill does not stack well.  For example, you must be very carefull if you use PositionMarking's markEndOfInputAsErrorAt in conjunction with it. 
+ - You can do something similar to `try` by using evaluateContinuesTillEndOfBlock along with markAsEndOfBlock to prevent <|> from believing that the choice is unambiguous.
 -}
 (<|>) : Parser input output-> Parser input output -> Parser input output
 (<|>) p1 p2 input =
@@ -167,32 +185,28 @@ transformError result transformation =
   _ -> result
 
 {- Trampolining -}
-{-| Create a thunk with id "" -}
-createSimpleContinuationThunk: Parser input output -> [input] -> ParserResult input output
-createSimpleContinuationThunk parser input = createContinuationThunk "" parser input
-
-{-| Create a thunk with the given id -}
-createContinuationThunk: String -> Parser input output -> [input] -> ParserResult input output
-createContinuationThunk id parser input =
+{-| Create a Continue of the given type -}
+continue: ContinueType -> Parser input output -> [input] -> ParserResult input output
+continue ctype parser input =
  Continue
-  {id=id
+  {ctype=ctype
   ,continuation = computeLater parser input}
 
-{-| Evaluate all thunks returning a fully evaluated ParserResult -}
-evaluateContinuations: ParserResult input output -> ParserResult input output
-evaluateContinuations result =
+{-| Evaluate all Continues returning a fully evaluated ParserResult -}
+evaluateContinues: ParserResult input output -> ParserResult input output
+evaluateContinues result =
  Trampoline.trampoline result <| \ result ->
  case result of
   Continue value ->  Either.Left <| evaluate value.continuation
   _ -> Either.Right result
 
-{-| Evaluate all thunks untill a thunk with the given id is reached. Then return it, unevaluated. -}
-evaluateContinuationsTill: String -> ParserResult input output -> ParserResult input output
-evaluateContinuationsTill id result =
+{-| Evaluate all Continues untill an EndOfBlock is reached. Then return it, unevaluated. -}
+evaluateContinuesTillEndOfBlock: ParserResult input output -> ParserResult input output
+evaluateContinuesTillEndOfBlock result =
  Trampoline.trampoline result <| \ result ->
  case result of
   Continue value ->
-   if | value.id == id -> Either.Right <| Continue value
+   if | value.ctype == EndOfBlock -> Either.Right <| Continue value
       | otherwise -> Either.Left <| evaluate value.continuation
   _ -> Either.Right result
 

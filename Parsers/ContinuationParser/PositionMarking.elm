@@ -69,23 +69,12 @@ errorAts message input =
   [] -> message ++ "\n    At end of input"
 
 markEndOfInputAsErrorAt: ContinuationParser (PositionMarked input) intermediate output -> String -> ContinuationParser (PositionMarked input) intermediate output
-markEndOfInputAsErrorAt continuationparser message continuation' input =
+markEndOfInputAsErrorAt continuationParser message continuation input =
  let
-  continuationId = errorAts message input
-  --continuation: Continuation input intermediate output
-  continuation intermediate input' =
-     createContinuationThunk continuationId (continuation' intermediate) input'
+  err = parseErrorAts message input
  in
- case  evaluateContinuationsTill continuationId <| continuationparser continuation input of
-  EndOfInputBeforeResultReached ->
-   parseErrorAts message input
-  otherCases -> otherCases
+ (continuationParser `replaceEndOfInputWith` err) continuation input -- Why do I need those parens?
 
-markEndOfInputAsError: Parser input output -> String -> Parser input output
-markEndOfInputAsError parser message input =
- case evaluateContinuations <| parser input of
-  EndOfInputBeforeResultReached -> ParseError message
-  otherCases -> otherCases
 {-
 The continuation parser
 Parsec inspired continuation passing style parser

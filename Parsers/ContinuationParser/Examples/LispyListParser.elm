@@ -13,6 +13,7 @@ import open Parsers.ContinuationParser.LexemeEaters
 import open Parsers.ContinuationParser.Specifics.Lexemes
 import open Parsers.ContinuationParser.Specifics.ContinuationParsers
 import open Parsers.CharacterClassification
+import Parsers.ContinuationParser.FinalParserResult as FinalParserResult
 
 import Char
 import String
@@ -26,10 +27,10 @@ data LispyList
 
 t = standardTaker
 
-parseLispyListFile: String ->  ParserResult (PositionMarked Char) [LispyList]
+parseLispyListFile: String ->  FinalParserResult.FinalParserResult [LispyList]
 parseLispyListFile input
  = parse
-    (charsToPositionMarkedChars <| String.toList input)
+    (charsToPositionMarkedChars <| String.toList (input++"\n"))
     (parseTopLevelLispyLists [])
 
 parseTopLevelLispyLists:
@@ -37,29 +38,28 @@ parseTopLevelLispyLists:
  -> Parser (PositionMarked Char) [LispyList]
 parseTopLevelLispyLists acc =
       t.takeWithFallbackValue whitespace (Parsed acc)
-   <| \ whitespace' ->
-              (tillEndOfInput (Parsed acc) (comment ";"
-     <| \ _ -> parseTopLevelLispyLists acc)
-                   <|>
-           (takeLispyList `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block."
+   <| \ _ ->
+    ((comment ";" `replaceEndOfInputWith` (Parsed acc) <| \ _ -> parseTopLevelLispyLists acc)
+             <|>
+    (takeLispyList
          <| \ list -> parseTopLevelLispyLists (acc++[list])))
 
 takeLispyList: ContinuationParser (PositionMarked Char) LispyList [LispyList]
 takeLispyList continuation =
  t.take (exactMatch ['(']) <| \ _ ->
- takeLispyList' [] continuation
+ ((takeLispyList' []) `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block.") continuation
  
 takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList [LispyList]
 takeLispyList' acc continuation =
   t.take whitespace <| \ _ ->
    ((comment ";"
-       <| \ _ -> takeLispyList' acc continuation) 
+       <| \ _ -> takeLispyList' acc continuation)
    <|> (takeString
        <| \ string -> takeLispyList' (acc++[LispyString string]) continuation)
    <|> (takeLispyList
        <| \ list -> takeLispyList' (acc++[list]) continuation)
    <|> (t.take (exactMatch [')'])
-       <| \ _ -> createSimpleContinuationThunk <| continuation (List acc))
+       <| \ _ -> continuation (List acc))
    <|> (t.take float
        <| \ number' -> takeLispyList' (acc++[Number number']) continuation)
    <|> (t.take lispySymbol
