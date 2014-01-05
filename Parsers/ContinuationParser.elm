@@ -68,9 +68,6 @@ fastforward n parser input =
         (i::is) -> fastforward (n-1) parser is
         [] -> EndOfInputBeforeResultReached
 
-
-
-
 infixl 0 <|>
 {-|
 This is the standard parser choice operator.  It alows you to say:
