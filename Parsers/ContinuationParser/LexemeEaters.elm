@@ -10,7 +10,7 @@ This module provides the fundamental functions for eating(parsing) lexemes.
 
 import open Parsers.ContinuationParser.Take
 import String
-import List
+import open List.CPSExtras
 
 {-| Eat anything that passes the test. -}
 charset: (char -> Bool) -> LexemeEater char [char]
@@ -38,20 +38,6 @@ keyword word punctuationTest acc input =
                               ++ (String.fromList (acc++[input]))
                               ++ "\" expected \""
                               ++ (String.fromList word) ++ "\""
-
-isPrefixOf: [a] -> [a] -> Bool
-isPrefixOf prefix list =
- case (prefix,list) of
-  ((p::ps),(l::ls)) ->
-   if | p == l -> isPrefixOf ps ls
-      | otherwise -> False
-  ((p::ps),[]) -> False
-  ([],(l::ls)) -> True
-  ([],[])      -> True
-
-isSuffixOf: [a] -> [a] -> Bool
-isSuffixOf suffix list =
- isPrefixOf (reverse suffix) (reverse list)
 
 {-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value -}
 lexeme: (char -> Bool) -> ([char] -> output) -> LexemeEater char output
