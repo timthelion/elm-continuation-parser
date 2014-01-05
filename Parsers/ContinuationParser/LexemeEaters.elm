@@ -82,6 +82,21 @@ convertOutputMaybe conversion eater acc input =
   LexemeError err -> LexemeError err
   IncompleteLexeme -> IncompleteLexeme
 
+convertInput: (input -> convertedInput) -> LexemeEater convertedInput output -> LexemeEater input output
+convertInput convert lexemeEater acc input =
+   let
+    convertedAcc = map convert acc
+    convertedInput = convert input
+   in
+   lexemeEater convertedAcc convertedInput
+
+anotateError: (String -> [char] -> char -> String) -> LexemeEater char output -> LexemeEater char output
+anotateError anotate lexemeEater acc input =
+   case lexemeEater acc input of
+    LexemeError err -> LexemeError <| anotate err acc input
+    EatenLexeme lexeme -> EatenLexeme lexeme
+    IncompleteLexeme -> IncompleteLexeme
+
 {-| Eat untill the condition is met.  The condition takes the currently consumed input and returns a Bool. -}
 untill: ([char]->Bool) -> LexemeEater char [char]
 untill test acc input =
