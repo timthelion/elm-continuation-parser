@@ -6,7 +6,7 @@ module Parsers.ContinuationParser.LexemeEaters where
 This module provides generic functions for building and modifying LexemEaters.
 
 #Types of lexemes
-@docs charset, keyword, lexeme, lexemeMaybe, untill, untillMarker, exactMatch
+@docs charset, keyword, lexeme, lexemeMaybe, symbol, untill, untillMarker, exactMatch
 
 #Modifying LexemeEaters
 @docs convertOutput, convertOutputMaybe, convertInput, anotateError
@@ -53,6 +53,15 @@ lexeme test conversion =
 lexemeMaybe: (char -> Bool) -> ([char] -> Maybe output) -> LexemeEater char output
 lexemeMaybe test conversion =
  convertOutputMaybe conversion (charset test)
+
+{-|
+
+This eats untill it reaches punctuation of your choice.  It then converts what it's eaten to a String.
+
+ -}
+symbol: (Char -> Bool) -> LexemeEater Char String
+symbol punctuationTest = symbol' punctuationTest
+symbol' punctuationTest = lexeme (not . punctuationTest) String.fromList
 
 {-| Eat untill the condition is met.  The condition takes the currently consumed input and returns a Bool. -}
 untill: ([char]->Bool) -> LexemeEater char [char]

@@ -6,7 +6,7 @@ module Parsers.ContinuationParser.Specifics.Lexemes where
 This module provides useful generic LexemeEaters.
 
 # LexemeEaters
-@docs whitespace, tillEndOfLine, int, float, symbol
+@docs whitespace, tillEndOfLine, int, float
 
 -}
 {- Basic libraries -}
@@ -42,15 +42,6 @@ Any digit or the '.' character
 -}
 float: LexemeEater Char Float
 float = lexemeMaybe (\c->Char.isDigit c||c=='.') (String.toFloat . String.fromList)
-
-{-|
-
-This eats untill it reaches punctuation of your choice.  It then converts what it's eaten to a String.
-
- -}
-symbol: (Char -> Bool) -> LexemeEater Char String
-symbol punctuationTest = symbol' punctuationTest
-symbol' punctuationTest = lexeme (not . punctuationTest) String.fromList
 
 {-|
 
