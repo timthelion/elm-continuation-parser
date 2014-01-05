@@ -3,15 +3,20 @@ Copyright information can be found at the end of this file.
 -}
 module Parsers.ContinuationParser.LexemeEaters where
 {-|
-This module provides the fundamental functions for eating(parsing) lexemes.
+This module provides generic functions for building and modifying LexemEaters.
 
-@docs charset, keyword, lexeme, lexemeMaybe, convertOutput, convertOutputMaybe, untill, untillMarker, exactMatch
+#Types of lexemes
+@docs charset, keyword, lexeme, lexemeMaybe, untill, untillMarker, exactMatch
+
+#Modifying LexemeEaters
+@docs convertOutput, convertOutputMaybe, convertInput, anotateError
 -}
 
 import open Parsers.ContinuationParser.Take
 import String
 import open List.CPSExtras
 
+{- types of lexeme -}
 {-| Eat anything that passes the test. -}
 charset: (char -> Bool) -> LexemeEater char [char]
 charset test acc input =
@@ -49,6 +54,29 @@ lexemeMaybe: (char -> Bool) -> ([char] -> Maybe output) -> LexemeEater char outp
 lexemeMaybe test conversion =
  convertOutputMaybe conversion (charset test)
 
+{-| Eat untill the condition is met.  The condition takes the currently consumed input and returns a Bool. -}
+untill: ([char]->Bool) -> LexemeEater char [char]
+untill test acc input =
+ if | test acc  -> EatenLexeme acc
+    | otherwise -> IncompleteLexeme
+
+{-| Eat untill the given marker(list segment) is reached, then return the eaten contents except for the segment. -}
+untillMarker: [char] -> LexemeEater char [char]
+untillMarker marker acc input =
+ case untill (\acc -> isSuffixOf marker acc) acc input of
+  EatenLexeme le -> EatenLexeme <| take (length le - length marker) le
+  IncompleteLexeme -> IncompleteLexeme
+ 
+exactMatch: [char] -> LexemeEater char [char]
+exactMatch patern acc input =
+ if | acc == patern -> EatenLexeme patern
+    | isPrefixOf (acc++[input]) patern -> IncompleteLexeme
+    | otherwise -> LexemeError <| "Unexpected input:" ++ show input
+
+exactStringMatch: String -> LexemeEater Char [Char]
+exactStringMatch s = exactMatch (String.toList s)
+
+{- modifying LexemeEaters -}
 {-| Convert the output of a LexemeEater using the given conversion funciton -}
 convertOutput: (output -> convertedOutput) -> LexemeEater char output -> LexemeEater char convertedOutput
 convertOutput conversion eater acc input =
@@ -82,28 +110,6 @@ anotateError anotate lexemeEater acc input =
     LexemeError err -> LexemeError <| anotate err acc input
     EatenLexeme lexeme -> EatenLexeme lexeme
     IncompleteLexeme -> IncompleteLexeme
-
-{-| Eat untill the condition is met.  The condition takes the currently consumed input and returns a Bool. -}
-untill: ([char]->Bool) -> LexemeEater char [char]
-untill test acc input =
- if | test acc  -> EatenLexeme acc
-    | otherwise -> IncompleteLexeme
-
-{-| Eat untill the given marker(list segment) is reached, then return the eaten contents except for the segment. -}
-untillMarker: [char] -> LexemeEater char [char]
-untillMarker marker acc input =
- case untill (\acc -> isSuffixOf marker acc) acc input of
-  EatenLexeme le -> EatenLexeme <| take (length le - length marker) le
-  IncompleteLexeme -> IncompleteLexeme
- 
-exactMatch: [char] -> LexemeEater char [char]
-exactMatch patern acc input =
- if | acc == patern -> EatenLexeme patern
-    | isPrefixOf (acc++[input]) patern -> IncompleteLexeme
-    | otherwise -> LexemeError <| "Unexpected input:" ++ show input
-
-exactStringMatch: String -> LexemeEater Char [Char]
-exactStringMatch s = exactMatch (String.toList s)
 
 {-
 The continuation parser
