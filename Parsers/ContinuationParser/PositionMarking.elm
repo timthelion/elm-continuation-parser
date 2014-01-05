@@ -12,7 +12,12 @@ This file provides the basic functionality for generating error messages with li
 @docs standardTaker, standardTakerOptions
 
 # Functions
-@docs charsToPositionMarkedChars, handlePositionMarkedInput, parseErrorAt, parseErrorAts, errorAt, errorAts, markEndOfInputAsErrorAt, markEndOfInputAsError
+
+## PositionMarking
+@docs charsToPositionMarkedChars, handlePositionMarkedInput
+
+## Error messages
+@docs parseErrorAts, parseErrorAt, markEndOfInputAsErrorAt, errorAts, errorAt
 
 -}
 import open Parsers.ContinuationParser
@@ -20,11 +25,13 @@ import open Parsers.ContinuationParser.Types
 import open Parsers.ContinuationParser.Take
 import open Parsers.ContinuationParser.LexemeEaters
 
+{- types -}
 type PositionMarked char =
  {line: Int
  ,column: Int
  ,char: char}
 
+{- taker constants -}
 standardTakerOptions: TakerOptions char (PositionMarked char) output
 standardTakerOptions =
  {lexemeEaterTransform = handlePositionMarkedInput
@@ -33,6 +40,7 @@ standardTakerOptions =
 standardTaker: Taker char (PositionMarked char) intermediate output
 standardTaker = newTaker standardTakerOptions
 
+{- position marking -}
 charsToPositionMarkedChars: [Char] -> [PositionMarked Char]
 charsToPositionMarkedChars chars = (\(acc,_,_) -> reverse acc) <|  foldl charToPositionMarkedChar ([],0,0) chars
 charToPositionMarkedChar char (acc,line,col) =
@@ -47,22 +55,12 @@ handlePositionMarkedInput
  = anotateError (\err acc input -> errorAt err input)
  . convertInput (\i->i.char)
 
-parseErrorAt: String -> PositionMarked char -> ParserResult input output
-parseErrorAt message location = ParseError <| errorAt message location
-
+{- error messages -}
 parseErrorAts: String -> [PositionMarked char] -> ParserResult input output
 parseErrorAts message input = ParseError <| errorAts message input
 
-errorAt: String -> PositionMarked char -> String
-errorAt message location =
- message ++ "\n    On line:"++(show location.line)
-         ++ "\n    At column:"++(show location.column)
-
-errorAts: String -> [PositionMarked char] -> String
-errorAts message input =
- case input of
-  (location::_) -> errorAt message location
-  [] -> message ++ "\n    At end of input"
+parseErrorAt: String -> PositionMarked char -> ParserResult input output
+parseErrorAt message location = ParseError <| errorAt message location
 
 markEndOfInputAsErrorAt: ContinuationParser (PositionMarked input) intermediate output -> String -> ContinuationParser (PositionMarked input) intermediate output
 markEndOfInputAsErrorAt continuationParser message continuation input =
@@ -70,6 +68,17 @@ markEndOfInputAsErrorAt continuationParser message continuation input =
   err = parseErrorAts message input
  in
  (continuationParser `replaceEndOfInputWith` err) continuation input -- Why do I need those parens?
+
+errorAts: String -> [PositionMarked char] -> String
+errorAts message input =
+ case input of
+  (location::_) -> errorAt message location
+  [] -> message ++ "\n    At end of input"
+
+errorAt: String -> PositionMarked char -> String
+errorAt message location =
+ message ++ "\n    On line:"++(show location.line)
+         ++ "\n    At column:"++(show location.column)
 
 {-
 The continuation parser
