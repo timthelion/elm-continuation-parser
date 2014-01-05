@@ -2,6 +2,8 @@
 module  Parsers.ContinuationParser.Examples.ParseUserData where
 
 import open Parsers.ContinuationParser
+import open Parsers.ContinuationParser.Types
+import open Parsers.ContinuationParser.Take
 import open Parsers.ContinuationParser.LexemeEaters
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.Specifics.Lexemes

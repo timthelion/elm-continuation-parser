@@ -8,7 +8,7 @@ This module provides the fundamental functions for eating(parsing) lexemes.
 @docs charset, keyword, lexeme, lexemeMaybe, convertOutput, convertOutputMaybe, untill, untillMarker, exactMatch
 -}
 
-import open Parsers.ContinuationParser
+import open Parsers.ContinuationParser.Take
 import String
 import List
 

@@ -8,6 +8,8 @@ Copyright information can be found in the COPYING file or at the end of this fil
 
 module Parsers.ContinuationParser.Examples.LispyListParser where
 import open Parsers.ContinuationParser
+import open Parsers.ContinuationParser.Types
+import open Parsers.ContinuationParser.Take
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.LexemeEaters
 import open Parsers.ContinuationParser.Specifics.Lexemes

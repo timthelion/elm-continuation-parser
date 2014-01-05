@@ -17,6 +17,7 @@ import Char
 import open Parsers.CharacterClassification
 import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
+import open Parsers.ContinuationParser.Take
 
 {-| Eats any kind of whitespace. -}
 whitespace: LexemeEater  Char [Char]

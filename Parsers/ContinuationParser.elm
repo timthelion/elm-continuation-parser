@@ -3,59 +3,29 @@ For copyright information see the COPYING file or the end of this file.
 -}
 module Parsers.ContinuationParser where
 {-|
-This module provides the basic datatypes and the most fundamental functions used by the continuation parser.
+This module provides functions which operate on Parsers and ContinuationParsers(to be found int the Parsers.ContinuationParser.Types module).
 
-# Parsers
-## Types
-@docs Parser, ParserResult, Continuation, ContinuationParser
+# Fundimentals
+@docs parse, return, <|>
 
-## Functions
-@docs parse, return, fastforward, lookAhead, tillEndOfInput, <|>
+# Seeking
+@docs fastforward, lookAhead
 
-# Lexemes
+# Errors and end of input
+@docs tillEndOfInput
 
-## Types
-@docs LexemeEater, EatenLexeme, Taker, TakerOptions
-
-## Functions
-@newTaker
-
-The Taker object contains the following functions:
-
- - take
- - takeWithFallbackValue
-
-# Trampolining
-## Functions
-@docs createSimpleContinuationThunk, createContinuationThunk, evaluateContinues, evaluateContinuesTill
+# Continues
+@docs continue, evaluateContinues, evaluateContinuesTillEndOfBlock
 -}
 {- base imports -}
 import Trampoline
 import Either
 
 {- internal modules -}
-import open Lazzy
+import Lazzy
 import Parsers.ContinuationParser.FinalParserResult as FinalParserResult
+import open Parsers.ContinuationParser.Types
 
-{- Fundamentals -}
-type Parser input output = [input] -> ParserResult input output
-
-{-| Values of this type exist in two forms, fully evaluated and unevaluated.  When you have a `Parser` which as you see above creates a `ParserResult` this parser result is in an unevaluated form.  You must run it through the `parser` function to get the proper evaluated form.  When a `ParserResult` is in its evaluated form, the `Continue` case is not present. -}
-data ParserResult input output
- = Parsed output
- | ParseError String
- | EndOfInputBeforeResultReached
- | Continue {ctype:ContinueType,continuation:Lazy [input] (ParserResult input output)}
-
-data ContinueType
- = Unambiguous
- | EndOfBlock
-
-type Continuation input intermediate output
- = intermediate -> Parser input output
-
-type ContinuationParser input intermediate output
- = (Continuation input intermediate output) -> Parser input output
 
 {-| This function should be run on any `Parser` from which you would like to create a usable result.  Think of running a parser with the `parse` function line running a monad.
 -}
@@ -79,7 +49,7 @@ replaceEndOfInputWith: ContinuationParser input intermediate output -> ParserRes
 replaceEndOfInputWith continuationParser result continuation input =
  case evaluateContinuesTillEndOfBlock <| continuationParser (markAsEndOfBlock continuation) input of
   EndOfInputBeforeResultReached -> result
-  Continue value -> evaluate value.continuation -- Evaluate end of block marker
+  Continue value -> Lazzy.evaluate value.continuation -- Evaluate end of block marker
   otherCases -> otherCases
 
 markAsEndOfBlock: Continuation input intermediate output -> Continuation input intermediate output
@@ -90,7 +60,7 @@ return: ParserResult input output -> Parser input output
 return result _ = result
 
 {-| Remove a n characters/tokens from the input -}
-fastforward: Int -> Parser input output -> [input] -> ParserResult input output
+fastforward: Int -> Parser input output -> Parser input output
 fastforward n parser input =
  if | n == 0 -> parser input
     | otherwise ->
@@ -105,58 +75,6 @@ lookAheadInternal: Int -> ContinuationParser input [input] output
 lookAheadInternal n continuation input =
  continuation (take n input) input
 
-{- Lexemes -}
-
-type LexemeEater input output = [input] -> input -> EatenLexeme output
-
-data EatenLexeme output
- = EatenLexeme output
- | LexemeError String
- | IncompleteLexeme
-
-type Taker preTransformInput input intermediate output =
- {take: LexemeEater preTransformInput intermediate -> ContinuationParser input intermediate output
- ,takeWithFallbackValue: LexemeEater preTransformInput intermediate -> ParserResult input output -> ContinuationParser input intermediate output
- ,lookAhead: Int -> ContinuationParser input [preTransformInput] output}
-
-type TakerOptions preTransformInput input output
- = {lexemeEaterTransform: LexemeEaterTransform preTransformInput input output
-   ,inputTransform: [input] -> [preTransformInput]}
-
-type LexemeEaterTransform preTransformInput postTransformInput output = LexemeEater preTransformInput output -> LexemeEater postTransformInput output
-
-newTaker: TakerOptions preTransformInput input intermediate -> Taker preTransformInput input intermediate output
-newTaker to =
- let
-  take = takeInternal to
-  takeWithFallbackValue = takeWithFallbackValueInternal to
- in
- {take=take
- ,takeWithFallbackValue=takeWithFallbackValue
- ,lookAhead n continuation input = lookAheadInternal n (\intermediate -> continuation <| to.inputTransform intermediate) input
- }
-
-
-takeInternal: TakerOptions preTransformInput input intermediate -> LexemeEater preTransformInput intermediate -> ContinuationParser input intermediate output
-takeInternal takerOptions lexemeEater continuation input = take' takerOptions [] lexemeEater EndOfInputBeforeResultReached continuation input
-
-take': TakerOptions preTransformInput input intermediate -> [input] -> LexemeEater preTransformInput intermediate -> ParserResult input output -> ContinuationParser input intermediate output
-take' takerOptions acc lexemeEater fallbackValue continuation input =
- let
-  lexemeEater' = takerOptions.lexemeEaterTransform lexemeEater
- in
- case input of
-  (i::is) -> case lexemeEater' acc i of
-              EatenLexeme result ->
-               if | length acc > 0 -> continue Unambiguous (continuation result) (i::is)
-                  | otherwise -> continuation result (i::is) --TODO Be less naive about this...
-              IncompleteLexeme -> take' takerOptions (acc++[i]) lexemeEater fallbackValue continuation is
-              LexemeError err -> ParseError err
-  []      -> fallbackValue
-
-{-| Just like take, except return the given fallback value if we reach the end of input, rather than the default EndOfInputBeforeResultReached -}
-takeWithFallbackValueInternal: TakerOptions preTransformInput input intermediate -> LexemeEater preTransformInput intermediate -> ParserResult input output -> ContinuationParser input intermediate output
-takeWithFallbackValueInternal takerOptions lexemeEater fallbackValue continuation input = take' takerOptions [] lexemeEater fallbackValue continuation input
 
 infixl 0 <|>
 {-|
@@ -184,20 +102,20 @@ transformError result transformation =
   ParseError err -> transformation result
   _ -> result
 
-{- Trampolining -}
+{- Continues -}
 {-| Create a Continue of the given type -}
 continue: ContinueType -> Parser input output -> [input] -> ParserResult input output
 continue ctype parser input =
  Continue
   {ctype=ctype
-  ,continuation = computeLater parser input}
+  ,continuation = Lazzy.computeLater parser input}
 
 {-| Evaluate all Continues returning a fully evaluated ParserResult -}
 evaluateContinues: ParserResult input output -> ParserResult input output
 evaluateContinues result =
  Trampoline.trampoline result <| \ result ->
  case result of
-  Continue value ->  Either.Left <| evaluate value.continuation
+  Continue value ->  Either.Left <| Lazzy.evaluate value.continuation
   _ -> Either.Right result
 
 {-| Evaluate all Continues untill an EndOfBlock is reached. Then return it, unevaluated. -}
@@ -207,7 +125,7 @@ evaluateContinuesTillEndOfBlock result =
  case result of
   Continue value ->
    if | value.ctype == EndOfBlock -> Either.Right <| Continue value
-      | otherwise -> Either.Left <| evaluate value.continuation
+      | otherwise -> Either.Left <| Lazzy.evaluate value.continuation
   _ -> Either.Right result
 
 {-

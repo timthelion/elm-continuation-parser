@@ -16,6 +16,8 @@ import String
 {- Internal modules -}
 import open Parsers.CharacterClassification
 import open Parsers.ContinuationParser
+import open Parsers.ContinuationParser.Types
+import open Parsers.ContinuationParser.Take
 import open Parsers.ContinuationParser.LexemeEaters
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.Specifics.Lexemes
