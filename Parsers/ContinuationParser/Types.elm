@@ -10,7 +10,7 @@ import Lazzy
 {- types -}
 type Parser input output = [input] -> ParserResult input output
 
-{-| Values of this type exist in two forms, fully evaluated and unevaluated.  When you have a `Parser` which as you see above creates a `ParserResult` this parser result is in an unevaluated form.  You must run it through the `parser` function to get the proper evaluated form.  When a `ParserResult` is in its evaluated form, the `Continue` case is not present. -}
+{-| This is an internal result.  For final parser results(without the Continue case) see the Parsers.ContinuationParser.FinalParserResult module. -}
 data ParserResult input output
  = Parsed output
  | ParseError String
