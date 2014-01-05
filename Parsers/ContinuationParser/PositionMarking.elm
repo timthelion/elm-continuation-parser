@@ -18,6 +18,7 @@ This file provides the basic functionality for generating error messages with li
 import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.Types
 import open Parsers.ContinuationParser.Take
+import open Parsers.ContinuationParser.LexemeEaters
 
 type PositionMarked char =
  {line: Int
@@ -42,16 +43,9 @@ unmark: [PositionMarked char] -> [char]
 unmark = map (.char)
 
 handlePositionMarkedInput: LexemeEater char output -> LexemeEater (PositionMarked char) output
-handlePositionMarkedInput unmarkedLexemeEater =
- (\acc input ->
-   let
-    unmarkedAcc = unmark acc
-    unmarkedInput = input.char
-   in
-   case unmarkedLexemeEater unmarkedAcc unmarkedInput of
-    LexemeError err -> LexemeError <| errorAt err input
-    EatenLexeme lexeme -> EatenLexeme lexeme
-    IncompleteLexeme -> IncompleteLexeme)
+handlePositionMarkedInput
+ = anotateError (\err acc input -> errorAt err input)
+ . convertInput (\i->i.char)
 
 parseErrorAt: String -> PositionMarked char -> ParserResult input output
 parseErrorAt message location = ParseError <| errorAt message location
