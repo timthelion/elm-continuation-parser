@@ -9,7 +9,7 @@ This module provides generic functions for building and modifying LexemEaters.
 @docs charset, keyword, lexeme, lexemeMaybe, symbol, untill, untillMarker, exactMatch, endOfInput
 
 #Modifying LexemeEaters
-@docs convertOutput, convertOutputMaybe, convertInput, anotateError, catchEndOfInput
+@docs convertOutput, convertOutputMaybe, convertInput, anotateError, whenNothingWasEaten, catchEndOfInput
 -}
 
 import open Parsers.ContinuationParser.Take
@@ -56,20 +56,31 @@ keyword word punctuationTest acc input' =
                                 ++ (String.fromList word) ++ "\""
   Nothing -> punctuationTestSuccess
 
-{-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value -}
-lexeme: (char -> Bool) -> ([char] -> output) -> LexemeEater char output
-lexeme test conversion =
- convertOutput conversion (charset test)
+{-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value.
 
-{-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value.  If the conversion function returns Nothing, throw a parse error.-}
+- Returns an error if nothing is eaten
+-}
+lexeme: (char -> Bool) -> ([char] -> output) -> LexemeEater char output
+lexeme test conversion
+ = whenNothingWasEaten (LexemeError <| "Error invalid lexeme") -- TODO improve this error
+ <| convertOutput conversion (charset test)
+
+{-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value.
+
+- Returns an error if nothing is eaten
+- Returns an error if the conversion function returns Nothing.
+
+-}
 lexemeMaybe: (char -> Bool) -> ([char] -> Maybe output) -> LexemeEater char output
-lexemeMaybe test conversion =
- convertOutputMaybe conversion (charset test)
+lexemeMaybe test conversion
+ = whenNothingWasEaten (LexemeError <| "Error invalid lexeme") -- TODO improve this error
+ <| convertOutputMaybe conversion (charset test)
 
 {-|
 
 This eats untill it reaches punctuation of your choice.  It then converts what it's eaten to a String.
 
+Based on the lexeme function.
  -}
 symbol: (Char -> Bool) -> LexemeEater Char String
 symbol punctuationTest = symbol' punctuationTest
@@ -156,6 +167,15 @@ anotateError anotate lexemeEater acc input =
     LexemeError err -> LexemeError <| anotate err acc input
     EatenLexeme lexeme -> EatenLexeme lexeme
     IncompleteLexeme -> IncompleteLexeme
+
+whenNothingWasEaten: EatenLexeme output -> LexemeEater input output -> LexemeEater input output
+whenNothingWasEaten nothingEaten lexemeEater acc input =
+ case lexemeEater acc input of
+  IncompleteLexeme -> IncompleteLexeme
+  LexemeError err -> LexemeError err
+  EatenLexeme lexeme ->
+   if | length acc > 0 -> EatenLexeme lexeme
+      | otherwise -> nothingEaten
 
 catchEndOfInput: EatenLexeme output -> LexemeEater input output -> LexemeEater input output
 catchEndOfInput reaction lexemEater acc input =
