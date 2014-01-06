@@ -70,7 +70,7 @@ takeLispyList' acc continuation =
 
 lispySymbol =
  symbol
-  (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c)
+  (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c || c == '\"')
 
 
 {-
