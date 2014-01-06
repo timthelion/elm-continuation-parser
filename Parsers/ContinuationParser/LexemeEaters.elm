@@ -88,6 +88,11 @@ untillMarker marker acc input =
   EatenLexeme le -> EatenLexeme <| take (length le - length marker) le
   IncompleteLexeme -> IncompleteLexeme
  
+{-|
+Eats an exact patern.
+
+Note: if you want to parse a keyword, see the keyword function instead.
+-}
 exactMatch: [char] -> LexemeEater char [char]
 exactMatch patern acc input' =
  case input' of
@@ -99,10 +104,15 @@ exactMatch patern acc input' =
    if | acc == patern -> EatenLexeme patern
       | otherwise -> LexemeError <| "Unexpected end of input. Expected:" ++ show patern
 
+{-|
+Eats an exact patern.
 
+Note: if you want to parse a keyword, see the keyword function instead.
+-}
 exactStringMatch: String -> LexemeEater Char [Char]
 exactStringMatch s = exactMatch (String.toList s)
 
+{-| Succeeds if at end of input.  Otherwise throws unexpected input error. -}
 endOfInput: LexemeEater input ()
 endOfInput acc input =
  case input of
