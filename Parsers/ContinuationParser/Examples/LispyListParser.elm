@@ -62,7 +62,8 @@ takeLispyList' acc continuation =
        <| \ list -> takeLispyList' (acc++[list]) continuation)
    <|> (t.take (exactMatch [')'])
        <| \ _ -> continuation (List acc))
-   <|> (t.take float
+   <|> (  t.disambiguate Char.isDigit
+       <| t.take float
        <| \ number' -> takeLispyList' (acc++[Number number']) continuation)
    <|> (t.take lispySymbol
        <| \ symbol -> takeLispyList' (acc++[Symbol symbol]) continuation))

@@ -11,6 +11,7 @@ module Parsers.ContinuationParser.Take where
 The Taker object contains the following functions:
 
  - take
+ - disambiguate
  - lookAhead
 -}
 
@@ -30,6 +31,7 @@ data EatenLexeme output
 
 type Taker preTransformInput input intermediate output =
  {take: LexemeEater preTransformInput intermediate -> ContinuationParser input intermediate output
+ ,disambiguate: (preTransformInput -> Bool) -> Parser input output -> Parser input output
  ,lookAhead: Int -> ContinuationParser input [preTransformInput] output}
 
 type TakerOptions preTransformInput input output
@@ -41,10 +43,18 @@ type LexemeEaterTransform preTransformInput postTransformInput output = LexemeEa
 newTaker: TakerOptions preTransformInput input intermediate -> Taker preTransformInput input intermediate output
 newTaker to =
  let
-  take = takeInternal to
+  lookAhead n continuation input =
+   lookAheadInternal n (\intermediate -> continuation <| to.inputTransform intermediate) input
  in
- {take=take
- ,lookAhead n continuation input = lookAheadInternal n (\intermediate -> continuation <| to.inputTransform intermediate) input
+ {take = takeInternal to
+ ,disambiguate test parser input =
+    input |> (lookAhead 1 <| \ future ->
+    case future of
+     [] -> \ _ -> EndOfInputBeforeResultReached
+     (i::[]) ->
+      if | test i -> continue Unambiguous <| \ _ -> parser input
+         | otherwise -> \ _ -> ParseError "") -- This should never be show on screen as disambiguate should always be used along with <|> as a middle choice.
+ ,lookAhead = lookAhead
  }
 
 takeInternal: TakerOptions preTransformInput input intermediate -> LexemeEater preTransformInput intermediate -> ContinuationParser input intermediate output
