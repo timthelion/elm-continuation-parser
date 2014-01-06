@@ -52,7 +52,7 @@ unmark = map (.char)
 
 handlePositionMarkedInput: LexemeEater char output -> LexemeEater (PositionMarked char) output
 handlePositionMarkedInput
- = anotateError (\err acc input -> errorAt err input)
+ = anotateError (\err acc input -> errorAtM err input)
  . convertInput (\i->i.char)
 
 {- error messages -}
@@ -71,9 +71,15 @@ markEndOfInputAsErrorAt continuationParser message continuation input =
 
 errorAts: String -> [PositionMarked char] -> String
 errorAts message input =
+ errorAtM message <| case input of
+  (location::_) -> Just location
+  [] -> Nothing
+
+errorAtM: String -> Maybe (PositionMarked char) -> String
+errorAtM message input =
  case input of
-  (location::_) -> errorAt message location
-  [] -> message ++ "\n    At end of input"
+  Just location -> errorAt message location
+  Nothing -> message ++ "\n    At end of input"
 
 errorAt: String -> PositionMarked char -> String
 errorAt message location =

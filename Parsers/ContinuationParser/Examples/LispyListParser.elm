@@ -39,7 +39,7 @@ parseTopLevelLispyLists:
     [LispyList]
  -> Parser (PositionMarked Char) [LispyList]
 parseTopLevelLispyLists acc =
-      t.takeWithFallbackValue whitespace (Parsed acc)
+      t.take whitespace `replaceEndOfInputWith` (Parsed acc)
    <| \ _ ->
     ((comment ";" `replaceEndOfInputWith` (Parsed acc) <| \ _ -> parseTopLevelLispyLists acc)
              <|>

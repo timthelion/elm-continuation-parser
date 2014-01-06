@@ -6,10 +6,10 @@ module Parsers.ContinuationParser.LexemeEaters where
 This module provides generic functions for building and modifying LexemEaters.
 
 #Types of lexemes
-@docs charset, keyword, lexeme, lexemeMaybe, symbol, untill, untillMarker, exactMatch
+@docs charset, keyword, lexeme, lexemeMaybe, symbol, untill, untillMarker, exactMatch, endOfInput
 
 #Modifying LexemeEaters
-@docs convertOutput, convertOutputMaybe, convertInput, anotateError
+@docs convertOutput, convertOutputMaybe, convertInput, anotateError, catchEndOfInput
 -}
 
 import open Parsers.ContinuationParser.Take
@@ -17,32 +17,44 @@ import String
 import open List.CPSExtras
 
 {- types of lexeme -}
-{-| Eat anything that passes the test. -}
+{-| Eat anything that passes the test.
+If it reaches the end of the input before the test fails, take will return EndofinputBeforeResultReached.
+You can change this behavior with catchEndOfInput.
+-}
 charset: (char -> Bool) -> LexemeEater char [char]
-charset test acc input =
- if | test input -> IncompleteLexeme
-    | otherwise -> EatenLexeme acc
+charset test acc input' =
+ case input' of
+  Just input ->
+   if | test input -> IncompleteLexeme
+      | otherwise -> EatenLexeme acc
+  Nothing -> IncompleteLexeme
 
 {-| Eat anything that matches the list.  This function takes two parameters:
 
  - The keyword to be eaten
  - The punctuation test
 
-All keywords must end in punctuation.  Otherwise we would end up in the situation that "assumption" would match the keyword "as". -}
+All keywords must end in punctuation or end of input.  Otherwise we would end up in the situation that "assumption" would match the keyword "as". -}
 keyword: [Char] -> (Char->Bool) -> LexemeEater Char [Char]
-keyword word punctuationTest acc input =
- if | punctuationTest input ->
-       (if | acc == word -> EatenLexeme acc
-           | otherwise ->
-              LexemeError <| "Incomplete keyword: Got \""
-                              ++ (String.fromList acc)
-                              ++ "\" expected \""
-                              ++ (String.fromList word) ++ "\"")
-    | isPrefixOf (acc++[input]) word -> IncompleteLexeme
-    | otherwise -> LexemeError <| "Unexpected character:"++(show input) ++ "\n Got \""
-                              ++ (String.fromList (acc++[input]))
-                              ++ "\" expected \""
-                              ++ (String.fromList word) ++ "\""
+keyword word punctuationTest acc input' =
+ let
+  punctuationTestSuccess =
+   if | acc == word -> EatenLexeme acc
+      | otherwise ->
+         LexemeError <| "Incomplete keyword: Got \""
+                     ++ (String.fromList acc)
+                     ++ "\" expected \""
+                     ++ (String.fromList word) ++ "\""
+ in
+ case input' of
+  Just input ->
+   if | punctuationTest input -> punctuationTestSuccess
+      | isPrefixOf (acc++[input]) word -> IncompleteLexeme
+      | otherwise -> LexemeError <| "Unexpected character:"++(show input) ++ "\n Got \""
+                                ++ (String.fromList (acc++[input]))
+                                ++ "\" expected \""
+                                ++ (String.fromList word) ++ "\""
+  Nothing -> punctuationTestSuccess
 
 {-| Eat anything that passes the test, then use a conversion function to turn it into a more usefull intermediate value -}
 lexeme: (char -> Bool) -> ([char] -> output) -> LexemeEater char output
@@ -77,13 +89,25 @@ untillMarker marker acc input =
   IncompleteLexeme -> IncompleteLexeme
  
 exactMatch: [char] -> LexemeEater char [char]
-exactMatch patern acc input =
- if | acc == patern -> EatenLexeme patern
-    | isPrefixOf (acc++[input]) patern -> IncompleteLexeme
-    | otherwise -> LexemeError <| "Unexpected input:" ++ show input
+exactMatch patern acc input' =
+ case input' of
+  Just input ->
+   if | isPrefixOf (acc++[input]) patern -> IncompleteLexeme
+      | acc == patern -> EatenLexeme patern
+      | otherwise -> LexemeError <| "Unexpected input:" ++ show input ++ " expected:" ++ show patern
+  Nothing ->
+   if | acc == patern -> EatenLexeme patern
+      | otherwise -> LexemeError <| "Unexpected end of input. Expected:" ++ show patern
+
 
 exactStringMatch: String -> LexemeEater Char [Char]
 exactStringMatch s = exactMatch (String.toList s)
+
+endOfInput: LexemeEater input ()
+endOfInput acc input =
+ case input of
+  Nothing -> EatenLexeme ()
+  Just i -> LexemeError <| "Expected end of input, instead received:" ++ show i
 
 {- modifying LexemeEaters -}
 {-| Convert the output of a LexemeEater using the given conversion funciton -}
@@ -106,20 +130,28 @@ convertOutputMaybe conversion eater acc input =
   IncompleteLexeme -> IncompleteLexeme
 
 convertInput: (input -> convertedInput) -> LexemeEater convertedInput output -> LexemeEater input output
-convertInput convert lexemeEater acc input =
+convertInput convert lexemeEater acc input' =
    let
     convertedAcc = map convert acc
-    convertedInput = convert input
+    convertedInput =
+     case input' of
+      Just input -> Just <| convert input
+      Nothing -> Nothing
    in
    lexemeEater convertedAcc convertedInput
 
-anotateError: (String -> [char] -> char -> String) -> LexemeEater char output -> LexemeEater char output
+anotateError: (String -> [char] -> Maybe char -> String) -> LexemeEater char output -> LexemeEater char output
 anotateError anotate lexemeEater acc input =
    case lexemeEater acc input of
     LexemeError err -> LexemeError <| anotate err acc input
     EatenLexeme lexeme -> EatenLexeme lexeme
     IncompleteLexeme -> IncompleteLexeme
 
+catchEndOfInput: EatenLexeme output -> LexemeEater input output -> LexemeEater input output
+catchEndOfInput reaction lexemEater acc input =
+ case input of
+  Just _ -> lexemEater acc input
+  Nothing -> reaction
 {-
 The continuation parser
 Parsec inspired continuation passing style parser
