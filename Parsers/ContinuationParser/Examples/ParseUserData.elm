@@ -40,10 +40,10 @@ parseUserData' =
   <| t.take whitespace
   <| \ _ ->
    t.lookAhead 1 <| \ notWhitespace input ->
-   parseErrorAts ("Unexpected input "++(show notWhitespace)++" near end of file.") input
+   parseErrorAts {message = "Unexpected input "++(show notWhitespace)++" near end of file.",expected=Just "end of input"} input
 
 field: String -> LexemeEater Char [Char]
-field name = exactMatch (String.toList (name++":"))
+field name = exactStringMatch (name++":")
 nameField = field "Name"
 locationField = field "Location"
 occupationField = field "Occupation"

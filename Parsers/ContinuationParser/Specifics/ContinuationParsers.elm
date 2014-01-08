@@ -19,6 +19,7 @@ import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.Types
 import open Parsers.ContinuationParser.Take
 import open Parsers.ContinuationParser.LexemeEaters
+import Parsers.ContinuationParser.LexemeEaters as LE
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.Specifics.Lexemes
 
@@ -26,9 +27,9 @@ t = standardTaker
 
 takeString: ContinuationParser (PositionMarked Char) String output
 takeString continuation =
- t.take (exactMatch ['\"']) <| \ _ ->
+ t.take (LE.expect "string" <| exactMatch ['\"']) <| \ _ ->
  (takeString' []
- `markEndOfInputAsErrorAt` "Matching quote not found for string.") continuation
+ `markEndOfInputAsErrorAt` {message="Matching quote not found for string.",expected = Just "close quotes"}) continuation
 
 takeString': [Char] -> ContinuationParser (PositionMarked Char) String output
 takeString' acc continuation =
@@ -48,7 +49,7 @@ escapedChar continuation =
 {-| Eats a single line comment -}
 comment: String -> ContinuationParser (PositionMarked Char) [Char] output
 comment marker continuation =
- t.take (exactStringMatch marker) <| \ _ ->
+ t.take (LE.expect "comment" <| exactStringMatch marker) <| \ _ ->
  t.take tillEndOfLine continuation
 
 {-|
@@ -67,7 +68,7 @@ This eats a single character and then maps it to any associated escape sequence.
 escapedChar': LexemeEater Char Char
 escapedChar' acc input =
  case acc of
-  [] -> IncompleteLexeme
+  [] -> IncompleteLexeme <| Just "escaped character"
   (escaped::[]) ->
    let
     output =

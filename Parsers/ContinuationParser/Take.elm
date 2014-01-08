@@ -26,8 +26,8 @@ type LexemeEater input output = [input] -> Maybe input -> EatenLexeme output
 
 data EatenLexeme output
  = EatenLexeme output
- | LexemeError String
- | IncompleteLexeme
+ | LexemeError Error
+ | IncompleteLexeme Expectation
 
 type Taker preTransformInput input intermediate output =
  {take: LexemeEater preTransformInput intermediate -> ContinuationParser input intermediate output
@@ -50,10 +50,10 @@ newTaker to =
  ,disambiguate test parser input =
     input |> (lookAhead 1 <| \ future ->
     case future of
-     [] -> \ _ -> EndOfInputBeforeResultReached
+     [] -> \ _ -> EndOfInputBeforeResultReached Nothing
      (i::[]) ->
       if | test i -> continue Unambiguous <| \ _ -> parser input
-         | otherwise -> \ _ -> ParseError "") -- This should never be show on screen as disambiguate should always be used along with <|> as a middle choice.
+         | otherwise -> \ _ -> ParseError {message="",expected=Nothing})
  ,lookAhead = lookAhead
  }
 
@@ -71,12 +71,12 @@ take' takerOptions acc lexemeEater continuation input =
  case input of
   (i::is) -> case lexemeEater' acc (Just i) of
               EatenLexeme result -> determineAmbiguity result
-              IncompleteLexeme -> take' takerOptions (acc++[i]) lexemeEater continuation is
+              IncompleteLexeme expectation -> take' takerOptions (acc++[i]) lexemeEater continuation is
               LexemeError err -> ParseError err
   []      ->
    case lexemeEater' acc Nothing of
     EatenLexeme result -> determineAmbiguity result
-    IncompleteLexeme -> EndOfInputBeforeResultReached
+    IncompleteLexeme expectation -> EndOfInputBeforeResultReached expectation
     LexemeError err -> ParseError err
 
 {-| Look ahead n characters/items/tokens in the input.   If near the end of input, returns a partial result.  Example:

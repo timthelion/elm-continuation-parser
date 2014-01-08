@@ -17,11 +17,12 @@ import Char
 import open Parsers.CharacterClassification
 import open Parsers.ContinuationParser
 import open Parsers.ContinuationParser.LexemeEaters
+import Parsers.ContinuationParser.LexemeEaters as LE
 import open Parsers.ContinuationParser.Take
 
 {-| Eats any kind of whitespace. -}
 whitespace: LexemeEater  Char [Char]
-whitespace = charset isWhitespace
+whitespace = LE.expect "whitespace" <| charset isWhitespace
 
 {-| Eats untill it gets to a newline -}
 tillEndOfLine: LexemeEater Char [Char]
@@ -33,7 +34,7 @@ Any decimal digit
 
 -}
 int: LexemeEater Char Int
-int = lexemeMaybe (\c->Char.isDigit c) (String.toInt . String.fromList)
+int = LE.expect "int" <| lexemeMaybe (\c->Char.isDigit c) (String.toInt . String.fromList)
 
 {-| Eats a Float style number:
 
@@ -41,7 +42,7 @@ Any digit or the '.' character
 
 -}
 float: LexemeEater Char Float
-float = lexemeMaybe (\c->Char.isDigit c||c=='.') (String.toFloat . String.fromList)
+float = LE.expect "float" <| lexemeMaybe (\c->Char.isDigit c||c=='.') (String.toFloat . String.fromList)
 
 {-
 The continuation parser

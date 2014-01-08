@@ -12,7 +12,7 @@ This module provides functions which operate on Parsers and ContinuationParsers(
 @docs fastforward
 
 # Errors and end of input
-@docs tillEndOfInput, replaceEndOfInputWith, transformError
+@docs tillEndOfInput, replaceEndOfInputWith, expect
 
 # Continues
 @docs continue, markAsEndOfBlock, evaluateContinues, evaluateContinuesTillEndOfBlock
@@ -33,9 +33,16 @@ parse: [input] -> Parser input output -> FinalParserResult.FinalParserResult out
 parse input parser =
  evaluateContinues (parser input) |> \ result -> 
  case result of
-  EndOfInputBeforeResultReached -> FinalParserResult.EndOfInputBeforeResultReached
-  ParseError err -> FinalParserResult.ParseError err
+  EndOfInputBeforeResultReached expectation -> FinalParserResult.EndOfInputBeforeResultReached
+  ParseError err -> FinalParserResult.ParseError <| showError err
   Parsed output -> FinalParserResult.Parsed output
+
+showError: Error -> String
+showError err =
+ case err.expected of
+  Nothing -> err.message
+  Just expected -> err.message++"\n"
+                ++ "\tExpected:"++expected
 
 infixl 0 <|>
 {-|
@@ -49,11 +56,61 @@ Whereas in parsec <|> is LL(1) by default in the elm continuation parser it is L
 Notes:
  - take returns Continue at the end of each lexeme by default, so the choice operator is satisfied after a lexeme is eaten.
  - You can do something similar to `try` by using evaluateContinuesTillEndOfBlock along with markAsEndOfBlock to prevent <|> from believing that the choice is unambiguous.
+ - If you want this combinator to provide human readable error messages must ensure that all parsers you are choosing from have been labled with the `expect` function.  Many of the built-in Parsers and LexemeEaters are pre-labled.
 -}
 (<|>) : Parser input output-> Parser input output -> Parser input output
 (<|>) p1 p2 input =
- transformError (p1 input) <| \ err ->
- transformError (p2 input) <| \ _ -> err
+ case p1 input of
+  Parsed result -> Parsed result
+  Continue continuation -> Continue continuation
+  ParseError error1 ->
+   case p2 input of -- NOTE: When refactoring, don't accidently evaluate p2 before determining that an error has actually occured in p1 and that evaluating p2 is really necessary.
+    Parsed result -> Parsed result
+    Continue continuation -> Continue continuation
+    ParseError error2 -> ParseError <| concatChoiceErrors error1 error2
+    EndOfInputBeforeResultReached expected ->
+     ParseError <|
+      concatChoiceErrors
+       error1
+       {message = "Unexpected end of input."
+       ,expected = expected}
+  EndOfInputBeforeResultReached expected1 ->
+   case p2 input of
+    Parsed result -> Parsed result
+    Continue continue -> Continue continue
+    ParseError error ->
+     ParseError
+      <| concatChoiceErrors
+          {message = "Unexpected end of input."
+          ,expected = expected1}
+          error
+    EndOfInputBeforeResultReached expected2 ->
+     ParseError
+      <| concatChoiceErrors
+           {message = "Unexpected end of input."
+           ,expected = expected1}
+           {message = "Unexpected end of input."
+           ,expected = expected2}
+
+concatChoiceErrors: Error -> Error -> Error
+concatChoiceErrors error1 error2 =
+ case error1.expected of
+  Just expected ->
+   {message = "Cannot determine what comes next. The following parsers where tried and all of them failed.\n"
+           ++ showChoiceError error1
+           ++ showChoiceError error2
+   ,expected = Nothing}
+  Nothing ->
+   {message = error1.message
+           ++ showChoiceError error2
+   ,expected = Nothing}
+
+showChoiceError: Error -> String
+showChoiceError err =
+ case err.expected of
+  Just expected -> "*\""++expected++"\" failed with:\n"
+                ++ "\t"++err.message++"\n"
+  Nothing -> "* Programmer error, unlabled parser used with the choice operator.  This parser returned the following error:\n" ++ err.message ++ "\n"
 
 {-| Create a parser which ignores its input and returns the given result directly. -}
 return: ParserResult input output -> Parser input output
@@ -67,16 +124,16 @@ fastforward n parser input =
     | otherwise ->
        case input of
         (i::is) -> fastforward (n-1) parser is
-        [] -> EndOfInputBeforeResultReached
+        [] -> EndOfInputBeforeResultReached <| Just <| "at least " ++ show n ++ " more characters in the input."
 
 {- errors and end of input -}
 {-| Parse till end of input, when end of input is reached return the given ParserResult.  Good for error checks. -}
 tillEndOfInput: ParserResult input output -> Parser input ignoredOutput -> Parser input output
 tillEndOfInput result parser input =
  case evaluateContinues <| parser input of
-  EndOfInputBeforeResultReached -> result
+  EndOfInputBeforeResultReached _ -> result
   ParseError err -> ParseError err
-  Parsed _ -> {- This shouldn't happen -} ParseError "Programmer error: End of input parsers should not return a result."
+  Parsed _ -> {- This shouldn't happen -} ParseError {message = "Programmer error: End of input parsers should not return a result.", expected = Nothing}
 
 {-|
 If the end of input is reached before a certain continuation parser goes onto its continuation, return the given ParserResult instead of EndOfInputBeforeResultReached.
@@ -84,17 +141,17 @@ If the end of input is reached before a certain continuation parser goes onto it
 replaceEndOfInputWith: ContinuationParser input intermediate output -> ParserResult input output -> ContinuationParser input intermediate output
 replaceEndOfInputWith continuationParser result continuation input =
  case evaluateContinuesTillEndOfBlock <| continuationParser (markAsEndOfBlock continuation) input of
-  EndOfInputBeforeResultReached -> result
+  EndOfInputBeforeResultReached _ -> result
   Continue value -> Lazzy.evaluate value.continuation -- Evaluate end of block marker
   otherCases -> otherCases
 
-{-| If the ParserResult is EndOfInputBeforeResultReached or ParseError apply the given function to that error. -}
-transformError: ParserResult input output -> (ParserResult input output -> ParserResult input output) -> ParserResult input output
-transformError result transformation =
- case result of
-  EndOfInputBeforeResultReached -> transformation result
-  ParseError err -> transformation result
-  _ -> result
+expect: String -> Parser input output -> Parser input output
+expect expectation parser input =
+ case parser input of
+  Parsed result -> Parsed result
+  Continue continuation -> Continue continuation
+  ParseError err -> ParseError {err|expected <- Just <| expectation}
+  EndOfInputBeforeResultReached _ -> EndOfInputBeforeResultReached <| Just expectation
 
 {- Continues -}
 {-| Create a Continue of the given type -}

@@ -8,10 +8,12 @@ Copyright information can be found in the COPYING file or at the end of this fil
 
 module Parsers.ContinuationParser.Examples.LispyListParser where
 import open Parsers.ContinuationParser
+import Parsers.ContinuationParser as CP
 import open Parsers.ContinuationParser.Types
 import open Parsers.ContinuationParser.Take
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.LexemeEaters
+import Parsers.ContinuationParser.LexemeEaters as LE
 import open Parsers.ContinuationParser.Specifics.Lexemes
 import open Parsers.ContinuationParser.Specifics.ContinuationParsers
 import open Parsers.CharacterClassification
@@ -32,7 +34,7 @@ t = standardTaker
 parseLispyListFile: String ->  FinalParserResult.FinalParserResult [LispyList]
 parseLispyListFile input
  = parse
-    (charsToPositionMarkedChars <| String.toList (input++"\n"))
+    (charsToPositionMarkedChars <| String.toList input)
     (parseTopLevelLispyLists [])
 
 parseTopLevelLispyLists:
@@ -48,8 +50,8 @@ parseTopLevelLispyLists acc =
 
 takeLispyList: ContinuationParser (PositionMarked Char) LispyList [LispyList]
 takeLispyList continuation =
- t.take (exactMatch ['(']) <| \ _ ->
- ((takeLispyList' []) `markEndOfInputAsErrorAt` "Matching close parethesis not found for parenthesized block.") continuation
+ t.take (LE.expect "parenthesized list" <| exactMatch ['(']) <| \ _ ->
+ ((takeLispyList' []) `markEndOfInputAsErrorAt` {message="Matching close parethesis not found for parenthesized block.",expected=Just "more list items or close parenthesis."}) continuation
  
 takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList [LispyList]
 takeLispyList' acc continuation =
@@ -62,13 +64,14 @@ takeLispyList' acc continuation =
        <| \ list -> takeLispyList' (acc++[list]) continuation)
    <|> (t.take (exactMatch [')'])
        <| \ _ -> continuation (List acc))
-   <|> (  t.disambiguate Char.isDigit
+   <|> (  CP.expect "float"
+       <| t.disambiguate Char.isDigit
        <| t.take float
        <| \ number' -> takeLispyList' (acc++[Number number']) continuation)
    <|> (t.take lispySymbol
        <| \ symbol -> takeLispyList' (acc++[Symbol symbol]) continuation))
 
-lispySymbol =
+lispySymbol = LE.expect "name or other symbol" <|
  symbol
   (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c || c == '\"')
 

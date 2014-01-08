@@ -56,35 +56,35 @@ handlePositionMarkedInput
  . convertInput (\i->i.char)
 
 {- error messages -}
-parseErrorAts: String -> [PositionMarked char] -> ParserResult input output
-parseErrorAts message input = ParseError <| errorAts message input
+parseErrorAts: Error -> [PositionMarked char] -> ParserResult input output
+parseErrorAts err input = ParseError <| errorAts err input
 
-parseErrorAt: String -> PositionMarked char -> ParserResult input output
-parseErrorAt message location = ParseError <| errorAt message location
+parseErrorAt: Error -> PositionMarked char -> ParserResult input output
+parseErrorAt err location = ParseError <| errorAt err location
 
-markEndOfInputAsErrorAt: ContinuationParser (PositionMarked input) intermediate output -> String -> ContinuationParser (PositionMarked input) intermediate output
-markEndOfInputAsErrorAt continuationParser message continuation input =
+markEndOfInputAsErrorAt: ContinuationParser (PositionMarked input) intermediate output -> Error -> ContinuationParser (PositionMarked input) intermediate output
+markEndOfInputAsErrorAt continuationParser err continuation input =
  let
-  err = parseErrorAts message input
+  parseError = parseErrorAts err input
  in
- (continuationParser `replaceEndOfInputWith` err) continuation input -- Why do I need those parens?
+ (continuationParser `replaceEndOfInputWith` parseError) continuation input -- Why do I need those parens?
 
-errorAts: String -> [PositionMarked char] -> String
-errorAts message input =
- errorAtM message <| case input of
+errorAts: Error -> [PositionMarked char] -> Error
+errorAts err input =
+ errorAtM err <| case input of
   (location::_) -> Just location
   [] -> Nothing
 
-errorAtM: String -> Maybe (PositionMarked char) -> String
-errorAtM message input =
+errorAtM: Error -> Maybe (PositionMarked char) -> Error
+errorAtM err input =
  case input of
-  Just location -> errorAt message location
-  Nothing -> message ++ "\n    At end of input"
+  Just location -> errorAt err location
+  Nothing -> {err|message <- err.message ++ "\n    At end of input"}
 
-errorAt: String -> PositionMarked char -> String
-errorAt message location =
- message ++ "\n    On line:"++(show location.line)
-         ++ "\n    At column:"++(show location.column)
+errorAt: Error -> PositionMarked char -> Error
+errorAt err location ={err|message<-
+ err.message ++ "\n    On line:"++(show location.line)
+             ++ "\n    At column:"++(show location.column)}
 
 {-
 The continuation parser

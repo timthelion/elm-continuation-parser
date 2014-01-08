@@ -1,7 +1,7 @@
 module Parsers.ContinuationParser.Types where
 {-|
 ## Types
-@docs Parser, ParserResult, Continuation, ContinuationParser
+@docs Parser, ParserResult, Continuation, ContinuationParser, Error
 -}
 
 {- internal modules -}
@@ -13,13 +13,18 @@ type Parser input output = [input] -> ParserResult input output
 {-| This is an internal result.  For final parser results(without the Continue case) see the Parsers.ContinuationParser.FinalParserResult module. -}
 data ParserResult input output
  = Parsed output
- | ParseError String
- | EndOfInputBeforeResultReached
+ | ParseError Error
+ | EndOfInputBeforeResultReached Expectation
  | Continue {ctype:ContinueType,continuation:Lazzy.Lazy [input] (ParserResult input output)}
 
 data ContinueType
  = Unambiguous
  | EndOfBlock
+
+type Error = {message: String
+             ,expected: Expectation}
+
+type Expectation = Maybe String
 
 type Continuation input intermediate output
  = intermediate -> Parser input output
