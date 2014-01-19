@@ -170,20 +170,29 @@ markAsEndOfBlock continuation intermediate = continue EndOfBlock <| continuation
 {-| Evaluate all Continues returning a fully evaluated ParserResult -}
 evaluateContinues: ParserResult input output -> ParserResult input output
 evaluateContinues result =
- Trampoline.trampoline result <| \ result ->
- case result of
-  Continue value ->  Either.Left <| Lazzy.evaluate value.continuation
-  _ -> Either.Right result
+ let
+  --makeTrampoline: ParserResult input output -> Trampoline (ParserResult input output)
+  makeTrampoline result =
+  case result of
+    Continue value -> Trampoline.Trampoline . Either.Left <| \_-> makeTrampoline <| Lazzy.evaluate value.continuation
+    _ -> Trampoline.Trampoline . Either.Right <| result
+ in
+ Trampoline.trampoline <| makeTrampoline result
+  
 
 {-| Evaluate all Continues untill an EndOfBlock is reached. Then return it, unevaluated. -}
 evaluateContinuesTillEndOfBlock: ParserResult input output -> ParserResult input output
 evaluateContinuesTillEndOfBlock result =
- Trampoline.trampoline result <| \ result ->
- case result of
-  Continue value ->
-   if | value.ctype == EndOfBlock -> Either.Right <| Continue value
-      | otherwise -> Either.Left <| Lazzy.evaluate value.continuation
-  _ -> Either.Right result
+ let
+  --makeTrampoline: ParserResult input output -> Trampoline (ParserResult input output)
+  makeTrampoline result =
+   case result of
+    Continue value ->
+     if | value.ctype == EndOfBlock -> Trampoline.Trampoline . Either.Right <| Continue value
+        | otherwise -> Trampoline.Trampoline . Either.Left <| \_-> makeTrampoline <| Lazzy.evaluate value.continuation
+    _ -> Trampoline.Trampoline . Either.Right <| result
+ in
+ Trampoline.trampoline <| makeTrampoline result
 
 {-
 The continuation parser
