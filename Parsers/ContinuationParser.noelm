@@ -6,7 +6,7 @@ module Parsers.ContinuationParser where
 This module provides functions which operate on Parsers and ContinuationParsers(to be found int the Parsers.ContinuationParser.Types module).
 
 # Fundimentals
-@docs parse, <|>, return
+@docs parse, <|>, fmap, return
 
 # Seeking
 @docs fastforward
@@ -111,6 +111,15 @@ showChoiceError err =
   Just expected -> "*\""++expected++"\" failed with:\n"
                 ++ "\t"++err.message++"\n"
   Nothing -> "* Programmer error, unlabled parser used with the choice operator.  This parser returned the following error:\n" ++ err.message ++ "\n"
+
+{-| Not quite a traditional `fmap`, evaluates all `Continue`s and then applies the function to the output if the result is Parsed output -}
+fmap: (output -> transformedOutput) -> ParserResult input output -> ParserResult input transformedOutput
+fmap f parserResult =
+ case evaluateContinues parserResult of
+  Parsed result -> Parsed (f result)
+  EndOfInputBeforeResultReached e -> EndOfInputBeforeResultReached e
+  ParseError e -> ParseError e
+  -- Continue -> Doesn't happen.
 
 {-| Create a parser which ignores its input and returns the given result directly. -}
 return: ParserResult input output -> Parser input output
