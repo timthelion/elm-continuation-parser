@@ -11,6 +11,7 @@ module Parsers.ContinuationParser.Examples.LispyListTutorial where
 
 import Parsers.ContinuationParser.Examples.LispyListTutorial.BasicTypes as BasicTypes
 import Parsers.ContinuationParser.Examples.LispyListTutorial.UserData as UserData
+import Parsers.ContinuationParser.Examples.LispyListTutorial.ChoiceOperator as ChoiceOperator
 import Parsers.ContinuationParser.Examples.LispyListTutorial.LispyLists as LispyLists
 import Parsers.ContinuationParser.Examples.LispyListTutorial.Conclusion as Conclusion
 import Parsers.ContinuationParser.Examples.LispyListTutorial.EndNotes as EndNotes
@@ -51,12 +52,15 @@ This tutorial was written by Timothy Hobbs in 2013.  The text portions of this t
 
 copyright w = color grey <| container w (heightOf copyrightText) midLeft copyrightText
 
-main = (\ w
-          userDataField
-          userDataOutput
-          lispyListParserField
-          lispyListParserOutput
-           ->flow down
+main =
+ (\ w
+    userDataField
+    userDataOutput
+    choiceOperatorField
+    choiceOperatorOutput
+    lispyListParserField
+    lispyListParserOutput
+     ->flow down
  [heading w
  ,tableOfContents
  ,copyright w
@@ -64,6 +68,9 @@ main = (\ w
  ,UserData.userData
  ,userDataField
  ,userDataOutput
+ ,ChoiceOperator.choiceOperator
+ ,choiceOperatorField
+ ,choiceOperatorOutput
  ,LispyLists.parsingLispyLists
  ,lispyListParserField
  ,lispyListParserOutput
@@ -72,5 +79,7 @@ main = (\ w
  <~ Window.width
  ~  UserData.userDataField
  ~  UserData.userDataOutput
+ ~  ChoiceOperator.choiceOperatorField
+ ~  ChoiceOperator.choiceOperatorOutput
  ~  LispyLists.lispyListParserField
  ~  LispyLists.lispyListParserOutput

@@ -1,0 +1,112 @@
+module Parsers.ContinuationParser.Examples.LispyListTutorial.ChoiceOperator where
+
+import Parsers.ContinuationParser.Examples.ParseUserData as ParseUserData
+
+import Parsers.ContinuationParser.Examples.FieldExtras as FieldExtras
+
+choiceOperator = [markdown|
+# The choice operator: <|>
+
+Most parsers cannot get away with blindly consuming input.  A parser that was only capable of the fill-in-the-blank example that we have seen so far would be as well expressed as some kind of regex or other patern templating system.
+
+To introduce the concept of choice, we will teach our computer to parse not just user dat but a general form which may be filled out with either UserData or CompanyData:
+
+````
+data Form = UserDataForm UserData | CompanyDataForm CompanyData
+
+type CompanyData =
+ {name:   String
+ ,market: String
+ ,salesContact: String}
+````
+
+The user may now fill out the form in the following two ways:
+
+````
+[User]
+Name: Maria
+Location: Brno
+Occupation: CEO
+````
+
+OR == <|>
+
+````
+[Company]
+Name: Lactoslimulate
+Market: Weight loss through lactation stimulation
+Sales contact: Eric Eoin Marques
+````
+
+Now createing a parser which parses `CompanyData` is a trivial cut/paste job:
+
+````
+TODO
+````
+
+But how do we choose which one to use?
+
+We tell the continuation parser to try one parser, and if it fails to parse the given input, try another parser.  We do this with the <|> operator, which is to be read as 'or'.
+
+````
+parseForm': Parser (PositionMarked Char) Form
+parseForm' =
+ parseUserDataForm
+        <|>
+ parseCompanyDataForm
+
+parseUserDataForm: Parser (PositionMarked Char) Form
+parseUserDataForm
+ =  CP.expect "User data" <|
+    t.take (exactStringMatch "[User]\n") <| \_ input->
+    CP.fmap UserDataForm <| parseUserData' input
+
+parseCompanyDataForm: Parser (PositionMarked Char) Form
+parseCompanyDataForm
+ =  CP.expect "Company data" <| 
+    t.take (exactStringMatch "[Company]\n") <| \_ input ->
+    CP.fmap CompanyDataForm <| (parseCompanyData' input)
+````
+
+You may recognize <|> from parsec, but be careful, the two are not the same!  Parsec's <|> is LL(1) by default.  It chooses between parsers by looking ahead only one character in the input(you can tell it to look ahead farther with `try`). The continuation parser works differently.  Lets return to the deffiniiton of `ParserResult`:
+
+````
+data ParserResult input output
+ = Parsed output
+ | ParseError Error
+ | EndOfInputBeforeResultReached Expectation
+ | Continue
+    {ctype:ContinueType
+    ,continuation:
+      Lazzy.Lazy [input] (ParserResult input output)}
+
+data ContinueType
+ = Unambiguous
+ | EndOfBlock
+````
+
+The important thing is the `Continue` case here.  As we now already, the difference between `ParserResult` and `FinalParserResult` is that the latter does not have the `Continue` case.  This case was origionally added in order to implement [trampolining](http://stackoverflow.com/questions/189725/what-is-a-trampoline-function), so as not to blow the stack while parsing large files.  The idea was simply to pass a thunk labled `Continue` back up the stack to the `parse` funciton every once in a while.  However, this case has proven usefull in other ways as well.
+
+The reason why parsec doesn't use `try` everywhere is performance.  Imangine <|> has to wait around for its first parser to finish just in case, 80 lines down, that parser might fail, leaving <|> to try its seccond option.  All that waiting arround of many <|>s would really waste space on the stack.  Parsec's <|> only waits until the first parser has consumed some in input in order to return.  In the continuation parser <|> waits untill it receives `Continue {ctype=Unambiguous,continuation=someContinuation}`. This allows the parser called by <|> to decide when to tell <|> that the current route may be unambiguously followed.
+
+Our `take` funciton returns `Continue {ctype=Unambiguous...}` after it has consumed a single lexeme. If we don't want this, we can use the `evaluateContinuesTillEndOfBlock` function along with the `markAsEndOfBlock` funciton, but more on that later.
+
+## Expectation
+
+When I provided you with the `parseUserDataForm` and `parseCompanyDataForm` functions above, I used one function with which you are as yet unfamiliar:
+
+````
+expect: String -> Parser input output -> Parsre input output
+````
+
+This function's sole purpuse is to be used with <|> to provide descriptive error messages. When you string together a bunch of <|>s, and all of them fail, <|> will give the user a list of the parsers that it tried along with the errors that each parser returned.  Use `expect` to give parsers names.  There is an identically named function that operates on `LexemeEater`s.  Many `LexemeEater`s are also preconfigured to expect something reasonable.  For example, `exactStringMatch` will expect the string it is to match.
+ 
+You can play with this parser bellow ([Source](https://github.com/timthelion/noelm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/ParseUserData.noelm)).  Try starting your from with something other than "[User]" or "[Company]" to see what error yot get when both parsers handed to <|> fail.
+|]
+
+(choiceOperatorField,choiceOperatorInput) =
+ FieldExtras.fieldMultilineWithDefaultText
+  "Enter a valid Form to be parsed here."
+  "[Company]\nName:MegaLegs\nMarket:Leg enlargement surgery\nSales contact:Lillian Jones\n"
+
+choiceOperatorOutput = (\input->asText <| ParseUserData.parseForm input) <~ choiceOperatorInput
