@@ -15,17 +15,19 @@ data ParserResult input output
  = Parsed output
  | ParseError String
  | EndOfInputBeforeResultReached
- | Continue {id:String,continuation:Lazy [input] (ParserResult input output)}
-````
-Note: For now, do not pay attention to the "Continue" case. It is not strictly necessary. Its only purpose is [trampolining](http://stackoverflow.com/questions/189725/what-is-a-trampoline-function).
+ | Continue {ctype:ContinueType,continuation:Lazy [input] (ParserResult input output)}
 
+data ContinueType
+ = Unambiguous
+ | EndOfBlock
+````
 Unlike parsec, the continuation parser is written in continuation passing style rather than monadic style.
 
 Rather than stringing together ParsecTs with the monadic bind we string together Continuations. Continuations are just functions which take yet to be consumed input.  There is no universal `bind` or `>>=`.  Rather any function of type ContinuationParser can be passed a continuation.
 
 ````
-type ContinuationParser input intermediate opinion output
- = (Continuation input intermediate opinion output) -> Parser input output
+type ContinuationParser input intermediate output
+ = (Continuation input intermediate output) -> Parser input output
 ````
 ContinuationParsers always:
 
@@ -33,38 +35,37 @@ ContinuationParsers always:
  - Produce an intermediate value
   - Call a continuation funciton
     + Passing it the intermediate value
-    + Passing it an opinion on what comes next(usually the next character of the input).
  - Return the value of the continuation
 
 ````
 type Continuation input intermediate opinion output
  = intermediate -> opinion -> Parser input output
 ````
-A Continuation is just a function which takes an intermediate value, an "opinion" on what probably comes next, and some input. It produces a ParserResult.
+A Continuation is just a function which takes an intermediate value and some input. It produces a ParserResult.
 
 The most commonly used type of ContinuationParsers is produced by the `take` function.
 
 ````
-take: LexemEater input opinion intermediate 
-    -> ContinuationParser input intermediate opinion output
+take: LexemEater input intermediate
+    -> ContinuationParser input intermediate output
 ````
 
 ````
-type LexemeEater input opinion output
- = [input] -> input -> EatenLexeme opinion output
+type LexemeEater input output
+ = [input] -> input -> EatenLexeme output
 
-data EatenLexeme opinion output
- = EatenLexeme {lexeme: output, transition: opinion}
+data EatenLexeme output
+ = EatenLexeme output
  | LexemeError String
  | IncompleteLexeme
 ````
 Here is an example LexemeEater:
 
 ````
-whitespace: LexemeEater Char Char [Char]
+whitespace: LexemeEater Char [Char]
 whitespace consumed input =
  if | isWhitespace input -> IncompleteLexeme
-    | otherwise -> EatenLexeme {lexeme=consumed,transition=input}
+    | otherwise -> EatenLexeme consumed
 ````
 This tells `take` that while the input(the next character in the input stream) isWhitespace, continue consuming input.  Once we see that the next character in the input stream is NOT whitespace, pass on the whitespace we just consumed to the Continuation as an intermediate value.
 
@@ -77,9 +78,16 @@ whitespace = charset isWhitespace
 **Finally** I'd like to point out that `Parser`s are run on input using the `parse` function:
 
 ````
-parse: [input] -> Parser input output -> ParserResult input output
+parse: [input] -> Parser input output -> FinalParserResult.FinalParserResult input output
 ````
 
-While from the standpoint of types this may not seem entirely necessary, in reality it is.  This function evaluates trampolined thunks passed down with the "Continue" case.  The output of this function is therefore never "Continue ..." but one of the more usefull results.
+A `FinalParserResult` is the same as `ParserResult`, but it does not contain the `Continue` case(to be explained later).
+
+````
+data FinalParserResult output
+ = Parsed output
+ | ParseError String
+ | EndOfInputBeforeResultReached
+````
 
 |]
