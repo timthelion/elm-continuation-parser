@@ -6,11 +6,16 @@ import Graphics.Element
 import Window
 
 fieldMultilineWithDefaultText: String -> String -> (Signal Element,Signal String)
-fieldMultilineWithDefaultText placeHolder defaultText =
+fieldMultilineWithDefaultText placeHolder defaultText = fieldMultilineWithDefaultText' id placeHolder defaultText
+
+halfScreenFieldMultilineWithDefaultText: String -> String -> (Signal Element,Signal String)
+halfScreenFieldMultilineWithDefaultText placeHolder defaultText = fieldMultilineWithDefaultText' (\n->n `div` 2) placeHolder defaultText
+
+fieldMultilineWithDefaultText': (Int -> Int) -> String -> String -> (Signal Element,Signal String)
+fieldMultilineWithDefaultText' widthSetter placeHolder defaultText =
     let tfs = fieldsMultiline {emptyMultilineFieldState|string<-defaultText}
         changes = dropRepeats tfs.events
         field' = lift (tfs.field id placeHolder) changes
-        field =(\f w h->Graphics.Element.size w (h `div` 2) f) <~ field' ~ Window.width ~ Window.height
+        field =(\f w h->Graphics.Element.size (widthSetter w) (h `div` 2) f) <~ field' ~ Window.width ~ Window.height
     in  (field,
           dropRepeats (lift .string changes))
-

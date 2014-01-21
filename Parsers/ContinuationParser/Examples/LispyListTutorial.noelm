@@ -13,6 +13,7 @@ import Parsers.ContinuationParser.Examples.LispyListTutorial.BasicTypes as Basic
 import Parsers.ContinuationParser.Examples.LispyListTutorial.UserData as UserData
 import Parsers.ContinuationParser.Examples.LispyListTutorial.ChoiceOperator as ChoiceOperator
 import Parsers.ContinuationParser.Examples.LispyListTutorial.LispyLists as LispyLists
+import Parsers.ContinuationParser.Examples.LispyListTutorial.MoreAboutContinue as MoreAboutContinue
 import Parsers.ContinuationParser.Examples.LispyListTutorial.Conclusion as Conclusion
 import Parsers.ContinuationParser.Examples.LispyListTutorial.EndNotes as EndNotes
 
@@ -60,6 +61,7 @@ main =
     choiceOperatorOutput
     lispyListParserField
     lispyListParserOutput
+    fooParserPlayArea
      ->flow down
  [heading w
  ,tableOfContents
@@ -74,6 +76,8 @@ main =
  ,LispyLists.parsingLispyLists
  ,lispyListParserField
  ,lispyListParserOutput
+ ,MoreAboutContinue.moreAboutContinue
+ ,fooParserPlayArea
  ,Conclusion.conclusion
  ,EndNotes.endNotes])
  <~ Window.width
@@ -83,3 +87,4 @@ main =
  ~  ChoiceOperator.choiceOperatorOutput
  ~  LispyLists.lispyListParserField
  ~  LispyLists.lispyListParserOutput
+ ~  MoreAboutContinue.fooParserPlayArea

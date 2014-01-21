@@ -1,0 +1,124 @@
+module Parsers.ContinuationParser.Examples.LispyListTutorial.MoreAboutContinue where
+
+import Parsers.ContinuationParser.Examples.FooParser as FooParser
+
+import Parsers.ContinuationParser.Examples.FieldExtras as FieldExtras
+
+import String
+
+moreAboutContinue = [markdown|
+
+# More about `Continue`
+
+## Thunk evaluators
+
+Let me repeate the definition of the `Continue` case:
+
+````
+data ParserResult input output
+ = ...
+ ...
+ ...
+ | Continue
+    {ctype:ContinueType
+    ,continuation:Lazzy.Lazy [input] (ParserResult input output)}
+
+data ContinueType
+ = Unambiguous
+ | EndOfBlock
+````
+
+Each `Continue` has a type and a `continuation`. The `continuation` is a lazy think which, when evaluated, produces a `ParserResult`.
+
+````
+evaluteContinues: ParserResult input output
+               -> ParserResult input output
+````
+
+The `evaluateContinues` funciton evalutates these thinks untill it gets to a non-Continue case. This function is used by the `parse` function to create a `FinalParserResult`.
+
+More interesting, perhaps, are the `evaluateContinuesTillEndOfBlock` and `markAsEndOfBlock` functions.
+
+````
+evaluateContinuesTillEndOfBlock: ParserResult input output
+                              -> ParserResult input output
+````
+
+````
+markAsEndOfBlock: Continuation input intermediate output
+               -> Continuation input intermediate output
+````
+
+As I mentioned earlier, these can be used with <|> to change when <|> is told that a choice is unambiguous.  If we have:
+
+````
+parseFooUnblocked': Parser (PositionMarked Char) Foo
+parseFooUnblocked' =
+ (t.take (exactStringMatch "Foo") <|\_->
+  t.take (exactStringMatch "Bar") <|\_-> return <| Parsed Bar)
+        <|>
+ (t.take (exactStringMatch "Foo") <|\_->
+  t.take (exactStringMatch "Baz") <|\_-> return <| Parsed Baz)
+````
+
+Than after succesfulling consuming "Foo", take will tell <|> that the first choice may be unambiguously taken.  If we then give this parser "FooBaz" we'll get an error saying it expected "Bar" rather than a proper parsing. We need to wrap "FooBar" and "FooBaz" in blocks instead:
+
+````
+parseFooBlocked': Parser (PositionMarked Char) Foo
+parseFooBlocked' =
+ (\i->evaluateContinuesTillEndOfBlock 
+  ((t.take (exactStringMatch "Foo") <|\_->
+   t.take (exactStringMatch "Bar") <| markAsEndOfBlock <|\_-> return <| Parsed Bar) i))
+        <|>
+ (\i->evaluateContinuesTillEndOfBlock -- Not strictly needed, but will produce nicer errors.
+  ((t.take (exactStringMatch "Foo") <|\_->
+   t.take (exactStringMatch "Baz") <| markAsEndOfBlock <|\_-> return <| Parsed Baz) i))
+````
+
+Blocks are used in a few different places.  One you already know is `markEndOfInputAsErrorAt` which wraps the `replaceEndOfInputWith` function:
+
+````
+replaceEndOfInputWith: ContinuationParser input intermediate output -> ParserResult input output -> ContinuationParser input intermediate output
+replaceEndOfInputWith continuationParser result continuation input =
+ case evaluateContinuesTillEndOfBlock <| continuationParser (markAsEndOfBlock continuation) input of
+  EndOfInputBeforeResultReached _ -> result
+  Continue value -> Lazzy.evaluate value.continuation -- Evaluate end of block marker
+  otherCases -> otherCases
+````
+
+You can try the two foo parsers bellow([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/FooParser.noelm)):
+|]
+
+(unblockedFooParserField,unblockedFooParserInput) =
+ FieldExtras.halfScreenFieldMultilineWithDefaultText
+  "Enter some Foo to be parsed here."
+  "FooBaz"
+
+unblockedFooParserOutput = (\input-> flow down <| map plainText <| String.split "\\n" <| show <| FooParser.parseFooUnblocked input) <~ unblockedFooParserInput
+
+(blockedFooParserField,blockedFooParserInput) =
+ FieldExtras.halfScreenFieldMultilineWithDefaultText
+  "Enter some Foo to be parsed here."
+  "FooBaz"
+
+blockedFooParserOutput = (\input->asText <| FooParser.parseFooBlocked input) <~ blockedFooParserInput
+
+fooParserPlayArea =
+ (\ufpf
+   ufpo
+   bfpf
+   bfpo ->
+   flow right
+    [flow down
+     [plainText "Unblocked foo parser:"
+     ,ufpf
+     ,ufpo]
+    ,flow down
+     [plainText "Blocked foo parser:"
+     ,bfpf
+     ,bfpo]
+    ])
+ <~ unblockedFooParserField 
+  ~ unblockedFooParserOutput
+  ~ blockedFooParserField
+  ~ blockedFooParserOutput
