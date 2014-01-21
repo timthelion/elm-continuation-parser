@@ -174,8 +174,8 @@ evaluateContinues result =
   --makeTrampoline: ParserResult input output -> Trampoline (ParserResult input output)
   makeTrampoline result =
   case result of
-    Continue value -> Trampoline.Trampoline . Either.Left <| \_-> makeTrampoline <| Lazzy.evaluate value.continuation
-    _ -> Trampoline.Trampoline . Either.Right <| result
+    Continue value -> Trampoline.Continue <| \_-> makeTrampoline <| Lazzy.evaluate value.continuation
+    _ -> Trampoline.Done result
  in
  Trampoline.trampoline <| makeTrampoline result
   
@@ -188,9 +188,9 @@ evaluateContinuesTillEndOfBlock result =
   makeTrampoline result =
    case result of
     Continue value ->
-     if | value.ctype == EndOfBlock -> Trampoline.Trampoline . Either.Right <| Continue value
-        | otherwise -> Trampoline.Trampoline . Either.Left <| \_-> makeTrampoline <| Lazzy.evaluate value.continuation
-    _ -> Trampoline.Trampoline . Either.Right <| result
+     if | value.ctype == EndOfBlock -> Trampoline.Done <| Continue value
+        | otherwise -> Trampoline.Continue <| \_-> makeTrampoline <| Lazzy.evaluate value.continuation
+    _ -> Trampoline.Done result
  in
  Trampoline.trampoline <| makeTrampoline result
 
