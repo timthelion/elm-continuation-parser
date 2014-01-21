@@ -71,9 +71,10 @@ takeLispyList' acc continuation =
    <|> (t.take lispySymbol
        <| \ symbol -> takeLispyList' (acc++[Symbol symbol]) continuation))
 
+lispySymbol: LexemeEater Char String
 lispySymbol = LE.expect "name or other symbol" <|
  symbol
-  (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c || c == '\"')
+  (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c || c == '\"' || c == ';')
 
 
 {-

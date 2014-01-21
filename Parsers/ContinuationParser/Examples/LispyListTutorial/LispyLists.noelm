@@ -72,9 +72,16 @@ The imports are much the same as with our earlier example:
 
 ````
 import open Parsers.ContinuationParser
+import Parsers.ContinuationParser as CP
+import open Parsers.ContinuationParser.Types
+import open Parsers.ContinuationParser.Take
 import open Parsers.ContinuationParser.PositionMarking
 import open Parsers.ContinuationParser.LexemeEaters
+import Parsers.ContinuationParser.LexemeEaters as LE
 import open Parsers.ContinuationParser.Specifics.Lexemes
+import open Parsers.ContinuationParser.Specifics.ContinuationParsers
+import open Parsers.CharacterClassification
+import Parsers.ContinuationParser.FinalParserResult as FinalParserResult
 
 import Char
 import String
@@ -91,7 +98,9 @@ import open Parsers.CharacterClassification
 The `ContinuationParsers` module is intended to provide generic `ContinuationParser`s.  As of this writing it includes only one and that is the `takeString` parser.  This takes a quoted string, dealing with standard backslashed escape sequences.
 
 The `CharsetClassification` module provides functions like `isWhitespace` and `isLetter` that didn't make their way into the standard `Char` library.
+
 ### Boilerplate
+
 Just as before, we define `t` as our taker:
 
 ````
@@ -101,12 +110,13 @@ t = standardTaker
 ### Our main function
 Our main function looks much like the main function in the previous example.
 
-```
-parseLispyListFile: String -> ParserResult (PositionMarked Char) [LispyList]
+````
+parseLispyListFile: String ->  FinalParserResult.FinalParserResult [LispyList]
 parseLispyListFile input
  = parse
     (charsToPositionMarkedChars <| String.toList input)
     (parseTopLevelLispyLists [])
+
 ````
 
 The only interesting thing here, is that we are passing an empty accumulator to `parseTopLevelLispyLists`.
@@ -123,106 +133,71 @@ do
  return lispyLists
 ````
 
-This is what one might call failiure driven parsing.  It goes forward consuming lispy lists untill something hangs up, then it looks at what else it might try (in this case consuming whitespace and comments up untill the end of the file).
-
-
-Instead of enumerating failiure cases, we try to make an educated guess on what comes next.
-
-If we recall the type of a  `ContinuationParser`
-
-````
-type ContinuationParser input intermediate opinion output
- =  (Continuation input intermediate opinion output)
- -> Parser input output
-
-type Continuation input intermediate opinion output
- = intermediate -> opinion -> Parser input output
-````
-
-We see that `ContinuationParser`s not only pass their `Continuation`s an intermediate value, they also pass an argument named `opinion`.  In the case of most `ContinuationParser`s built with the `take` function, the `opinion` is the next character in the input after the lexeme which has just been consumed.  In the elm-continuation-parser source code, I alternate between calling the `opinion` argument "opinion" and "transition".  This is because the `opinion` is usually the character at the transition of two lexemes but I want to leave open the possibility for users of my library to provide a different type of opinion on what comes next.
+Rather than using monadic carying of state like in parsec, with the continuation parser we use recursion:
 
 ````
 parseTopLevelLispyLists:
     [LispyList]
  -> Parser (PositionMarked Char) [LispyList]
 parseTopLevelLispyLists acc =
-      t.takeWithFallbackValue whitespace (Parsed acc)
-   <| \ _ transition ->
-   if | transition == ';' ->
-           fastforward 1
-        <| t.takeWithFallbackValue comment (Parsed acc)
-        <| \ _ _ -> parseTopLevelLispyLists acc
-
-      | transition == '(' ->
-           fastforward 1
-        <| takeLispyList
-            `markEndOfInputAsErrorAt`
-           "Matching close parenthesis not found for parenthesized block."
-        <| \ list _ -> parseTopLevelLispyLists (acc++[list])
-
-      | otherwise ->
-         (\input -> parseErrorAts ("Unexpected input:" ++ (show transition)) input)
+      t.take whitespace `replaceEndOfInputWith` (Parsed acc)
+   <| \ _ ->
+    ((comment ";" `replaceEndOfInputWith` (Parsed acc) <| \ _ -> parseTopLevelLispyLists acc)
+             <|>
+    (takeLispyList
+         <| \ list -> parseTopLevelLispyLists (acc++[list])))
 ````
 
-In this excerpt we take some `whitespace` and bind the first non-whitespace character in our input to the name `transition`.  We then make a choice:
+In this excerpt we take some `whitespace` and stop at the first non-whitespace character in our input to the name transition.  We then make a choice:
 
- - If the `transition` character is a semicolon ';', we `fastforward` past that semicolon, and read till the end of the line(the comment lexeme reads untill it reaches a newline character).  We then ignore any intermediate value that the `comment` lexeme created(the comment's text) and go on to run `parseTopLevelLists` on the remainder of the input.  If our file consisted mearly of comments and whitespace then we would continue looping like this untill the end of the input.
+ - If the next thing in the input is a semicolon ';', the `comment` lexeme tells <|> that it can `Continue` unambiguously.  The comment lexeme reads its given marker and then reads till the end of the line.  We then ignore any intermediate value that the `comment` lexeme created(the comment's text) and go on to run `parseTopLevelLists` on the remainder of the input.  If our file consisted mearly of comments and whitespace then we would continue looping like this untill the end of the input.
 
- - If the `transition` character is '(', then we again `fastforward` past the '(' and then we call the `takeLispyList` function.  The `takeLispyList` function provides a `LispyList` as its intermediate value. The whole point of our parser is to convert a `String` to a `LispyList`. We now have a `LispyList` which we add to `acc`.  After we do so, we continue looking for more top level lispy lists.
+ - If the next thing in the input is '(', then we eat the '(' and then we call the `takeLispyList` function.  The `takeLispyList` function provides a `LispyList` as its intermediate value. The continuation passed to `takeLispyList` is a recursive call back to `parseTopLevelLispyLists`. The whole point of our parser is to convert a `String` to a `[LispyList]`. So now we have a `LispyList` which we add to `acc`. And we continue looking for more top level lispy lists.
 
- - If the transition character is neither a semicolon nor an open parenthesis we return an error.
+ - If the next input is neither a semicolon nor an open parenthesis we return an error.
 
-When we take `whitespace` or a `comment`, we do not just `take` that input, we `takeWithFallbackValue` it.  The `takeWithFallbackValue` function tries to take a lexeme, but if it reaches the end of the input before the lexeme is complete, it returns a given fallback value instead.  `takeWithFallbackValue whitespace (parsed acc) continuation` means that if the input only of whitespace up till the end of the input then we return (Parsed acc), however, if the whitespace lexeme "completes"(if we find something other than whitespace) then we go on to the continuation.  Here, if the only thing left in our file is whitespace or a comment, we are done and we return the accumulated `[LispyLists]`.
+When we take `whitespace` or a `comment` it is possible, that rather than the LexemeEater "ending" we could run into the EndOfInput instead.  The `replaceEndOfInputWith` function tries to run a `ContinuationParser` but if it reaches the end of the input before the parser completes, it returns a given fallback value instead.  ````t.take whitespace `replaceEndOfInputWith` (Parsed acc) continuation```` means that if the input consists only of whitespace up till the end of the input then we return (Parsed acc), however, if the whitespace lexeme "completes"(if we find something other than whitespace) then we go on to the continuation.  Here, if the only thing left in our file is whitespace or a comment, we are done and we return the accumulated `[LispyLists]`.
 
 The `markEndOfInputAsErrorAt` function takes a ContinuationParser and an error message and returns a ContinuationParser which evaluates to the error message(with appropriate line numbers) if the end of input is reached before the continuation is reached.  In this case, if the end of input is reached before the lispylist has finished being taken, a close paren error is displayed.
 
 **The `takeLispyList` function** is the workhorse of our parser:
 
 ````
-takeLispyList: ContinuationParser (PositionMarked Char) LispyList Char [LispyList]
-takeLispyList continuation = takeLispyList' [] continuation
-
-takeLispyList':
-    [LispyList]
- -> ContinuationParser (PositionMarked Char) LispyList Char [LispyList]
+takeLispyList: ContinuationParser (PositionMarked Char) LispyList [LispyList]
+takeLispyList continuation =
+ t.take (LE.expect "parenthesized list" <| exactMatch ['(']) <| \ _ ->
+ ((takeLispyList' []) `markEndOfInputAsErrorAt`
+   {message  = "Matching close parethesis not found for parenthesized block."
+   ,expected = Just "more list items or close parenthesis."}) continuation
+ 
+takeLispyList': [LispyList] -> ContinuationParser (PositionMarked Char) LispyList [LispyList]
 takeLispyList' acc continuation =
- t.take whitespace <| \ _ transition ->
- if | transition == ';' ->
-       fastforward 1
-    <| t.take comment
-    <| \ _ _ -> takeLispyList' acc continuation
-
-    | transition == '\"' ->
-        fastforward 1
-     <| takeString
-     <| \ string _ -> takeLispyList' (acc++[LispyString string]) continuation
-
-    | transition == '(' ->
-        fastforward 1
-     <| takeLispyList
-     <| \ list _ -> takeLispyList' (acc++[list]) continuation
-
-    | transition == ')' ->
-        fastforward 1
-     <| continuation (List acc) ')'
-
-    | Char.isDigit transition ->
-        t.take float
-     <| \ number' _ -> takeLispyList' (acc ++ [Number number']) continuation
-
-    | otherwise ->
-        t.take lispySymbol
-     <| \ symbol _ -> takeLispyList' (acc++[Symbol]) continuation
+  t.take whitespace <| \ _ ->
+   ((comment ";"
+       <| \ _ -> takeLispyList' acc continuation)
+   <|> (takeString
+       <| \ string -> takeLispyList' (acc++[LispyString string]) continuation)
+   <|> (takeLispyList
+       <| \ list -> takeLispyList' (acc++[list]) continuation)
+   <|> (t.take (exactMatch [')'])
+       <| \ _ -> continuation (List acc))
+   <|> (  CP.expect "float"
+       <| t.disambiguate Char.isDigit
+       <| t.take float
+       <| \ number' -> takeLispyList' (acc++[Number number']) continuation)
+   <|> (t.take lispySymbol
+       <| \ symbol -> takeLispyList' (acc++[Symbol symbol]) continuation))
 ````
 
-There is surprisingly little new here.   The only thing of note in this function are the last two cases: isDigit and otherwise.  There is no fastforward here, because the lexeme boundary IS the start of the next lexeme.
+There is surprisingly little new here. The only thing of note in this function is the seccond to last case: `t.disambiguate Char.isDigit`.
 
-Our last function in the LispyList parser is
+ - `t.disambiguate` disambiguates in the old parsec LL(1) fassion on the basis of a single character.  Why do we use it here?  Certainly `t.take float` is enough.  Indeed it is, but we want to provide our user with nice error messages.  If they type in "( 1. hello)" we don't want to list for them all the different things <|> tried.  We simply want to tell them that parsing the number failed.
 
 ````
-lispySymbol =
+lispySymbol: LexemeEater Char String
+lispySymbol = LE.expect "name or other symbol" <|
  symbol
-  (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c)
+  (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c || c == '\"' || c == ';')
 ````
 
 You can try out our new LispyList parser bellow ([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/LispyListParserWithoutTrampolining.elm)):
