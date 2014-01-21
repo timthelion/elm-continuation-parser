@@ -1,4 +1,4 @@
-module Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter1 where
+module Parsers.ContinuationParser.Examples.LispyListTutorial.BasicTypes where
 
 basicTypes = [markdown|
 # The basic types

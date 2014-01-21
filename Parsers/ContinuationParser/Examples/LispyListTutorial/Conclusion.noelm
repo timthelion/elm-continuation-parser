@@ -1,4 +1,4 @@
-module Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter5 where
+module Parsers.ContinuationParser.Examples.LispyListTutorial.Conclusion where
 
 conclusion = [markdown|
 # Conclusion - Larger projects using this parsing library

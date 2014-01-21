@@ -9,12 +9,11 @@ This tutorial is intended to be a comprehensive primer in the use of the elm-con
 
 module Parsers.ContinuationParser.Examples.LispyListTutorial where
 
-import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter1 as Chapter1
-import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter2 as Chapter2
-import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter3 as Chapter3
-import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter4 as Chapter4
-import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter5 as Chapter5
-import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter6 as Chapter6
+import Parsers.ContinuationParser.Examples.LispyListTutorial.BasicTypes as BasicTypes
+import Parsers.ContinuationParser.Examples.LispyListTutorial.UserData as UserData
+import Parsers.ContinuationParser.Examples.LispyListTutorial.LispyLists as LispyLists
+import Parsers.ContinuationParser.Examples.LispyListTutorial.Conclusion as Conclusion
+import Parsers.ContinuationParser.Examples.LispyListTutorial.EndNotes as EndNotes
 
 import Window
 
@@ -40,6 +39,7 @@ tableOfContents = [markdown|
  - Chapter 4 - Parsing LISP
  - Chapter 5 - More about Continue
  - Chapter 6 - Conclusion
+ - Chapter 7 - End notes
 |]
 
 copyrightText = [markdown|
@@ -60,17 +60,17 @@ main = (\ w
  [heading w
  ,tableOfContents
  ,copyright w
- ,Chapter1.basicTypes
- ,Chapter2.userData
+ ,BasicTypes.basicTypes
+ ,UserData.userData
  ,userDataField
  ,userDataOutput
- ,Chapter3.parsingLispyLists
+ ,LispyLists.parsingLispyLists
  ,lispyListParserField
  ,lispyListParserOutput
- ,Chapter4.moreAboutContinue
- ,Chapter5.conclusion])
+ ,Conclusion.conclusion
+ ,EndNotes.endNotes])
  <~ Window.width
- ~  Chapter2.userDataField
- ~  Chapter2.userDataOutput
- ~  Chapter4.lispyListParserField
- ~  Chapter4.lispyListParserOutput
+ ~  UserData.userDataField
+ ~  UserData.userDataOutput
+ ~  LispyLists.lispyListParserField
+ ~  LispyLists.lispyListParserOutput

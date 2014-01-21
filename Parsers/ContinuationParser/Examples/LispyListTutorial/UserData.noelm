@@ -1,4 +1,4 @@
-module Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter2 where
+module Parsers.ContinuationParser.Examples.LispyListTutorial.UserData where
 
 import Parsers.ContinuationParser.Examples.ParseUserData as ParseUserData
 

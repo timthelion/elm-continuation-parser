@@ -1,6 +1,6 @@
-module  Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter3 where
+module  Parsers.ContinuationParser.Examples.LispyListTutorial.LispyLists where
 
-import Parsers.ContinuationParser.Examples.LispyListParser as LispyListParserWithoutTrampolining
+import Parsers.ContinuationParser.Examples.LispyListParser as LispyListParser
 
 import Parsers.ContinuationParser.Examples.FieldExtras as FieldExtras
 
@@ -228,9 +228,9 @@ lispySymbol =
 You can try out our new LispyList parser bellow ([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/LispyListParserWithoutTrampolining.elm)):
 |]
 
-(lispyListParserWithoutTrampoliningField,lispyListParserWithoutTrampoliningInput) =
+(lispyListParserField,lispyListParserInput) =
  FieldExtras.fieldMultilineWithDefaultText
   "Enter some lisp to be parsed here."
   "(This is (not a list) (but a tree)) \n (\"You see?\" (1 (2 (3 (4 (5.6))))))"
 
-lispyListParserWithoutTrampoliningOutput = (\input->asText <| LispyListParserWithoutTrampolining.parseLispyListFile input) <~ lispyListParserWithoutTrampoliningInput
+lispyListParserOutput = (\input->asText <| LispyListParser.parseLispyListFile input) <~ lispyListParserInput
