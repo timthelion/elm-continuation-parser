@@ -200,7 +200,7 @@ lispySymbol = LE.expect "name or other symbol" <|
   (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c || c == '\"' || c == ';')
 ````
 
-You can try out our new LispyList parser bellow ([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/LispyListParserWithoutTrampolining.elm)):
+You can try out our new LispyList parser bellow ([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/LispyListParser.noelm)):
 |]
 
 (lispyListParserField,lispyListParserInput) =
