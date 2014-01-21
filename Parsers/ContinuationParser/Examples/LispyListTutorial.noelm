@@ -14,46 +14,63 @@ import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter2 as Chapter
 import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter3 as Chapter3
 import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter4 as Chapter4
 import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter5 as Chapter5
+import Parsers.ContinuationParser.Examples.LispyListTutorial.Chapter6 as Chapter6
+
+import Window
+
+headingText = [markdown|
+
+# The continuation parser ([download/source](https://github.com/timthelion/elm-continuation-parser))
+
+|]
+
+orange = (rgb 228 129 22 )
+grey   = (rgb 122 122 122)
+
+heading w = color orange <| container w (heightOf headingText+40) midLeft headingText
 
 tableOfContents = [markdown|
-# The continuation parser ([download/source](https://github.com/timthelion/elm-continuation-parser))
 
 **Table of Contents**
  
  - Copyright info
  - Chapter 1 - The basic types
  - Chapter 2 - Our first parser
- - Chapter 3 - Parsing LISP
- - Chapter 4 - Trampolining
- - Chapter 5 - Conclusion
+ - Chapter 3 - The choice operator
+ - Chapter 4 - Parsing LISP
+ - Chapter 5 - More about Continue
+ - Chapter 6 - Conclusion
+|]
 
+copyrightText = [markdown|
 # Copyright info
 
 This tutorial was written by Timothy Hobbs in 2013.  The text portions of this tutorial are realeased under the license [Creative Commons ZERO](http://creativecommons.org/publicdomain/zero/1.0/).  The code is under the license LGPL V3 or later.
+
 |]
 
-main = (\ userDataField
+copyright w = color grey <| container w (heightOf copyrightText) midLeft copyrightText
+
+main = (\ w
+          userDataField
           userDataOutput
-          lispyListParserWithoutTrampoliningField
-          lispyListParserWithoutTrampoliningOutput
           lispyListParserField
           lispyListParserOutput
            ->flow down
- [tableOfContents
+ [heading w
+ ,tableOfContents
+ ,copyright w
  ,Chapter1.basicTypes
  ,Chapter2.userData
  ,userDataField
  ,userDataOutput
  ,Chapter3.parsingLispyLists
- ,lispyListParserWithoutTrampoliningField
- ,lispyListParserWithoutTrampoliningOutput
- ,Chapter4.trampolining
  ,lispyListParserField
  ,lispyListParserOutput
+ ,Chapter4.moreAboutContinue
  ,Chapter5.conclusion])
- <~ Chapter2.userDataField
+ <~ Window.width
+ ~  Chapter2.userDataField
  ~  Chapter2.userDataOutput
- ~  Chapter3.lispyListParserWithoutTrampoliningField
- ~  Chapter3.lispyListParserWithoutTrampoliningOutput
  ~  Chapter4.lispyListParserField
  ~  Chapter4.lispyListParserOutput
