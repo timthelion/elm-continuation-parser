@@ -16,7 +16,10 @@ Ocupation: Programmer
 And we want to put it into a record of
 
 ````
-type UserData = {name:String,location:String,occupation:String}
+type UserData =
+ {name:String
+ ,location:String
+ ,occupation:String}
 ````
 
 ### What is our parser going to do?
@@ -40,10 +43,10 @@ import open Parsers.CharacterClassification -- (isWhitespace)
 
 import String
 ````
-The ContinuationParser module provides the basic functions and data types that we'll need to do our parsing.  The LexemeEaters module provides basic functions for constructing new LexemeEaters. We also import String, because our parser will work with lists of characters rather than Elm Strings and so we'll need to convert between the two.
+The ContinuationParser module provides the basic functions and data types that we'll need to do our parsing.  The LexemeEaters module provides basic functions for constructing new LexemeEaters. We also import String, because our parser will work with lists of characters rather than Noelm Strings and so we'll need to convert between the two.
 
 #### Preperatory boiler-plate
-It is possible to configure the `take` function's behavior.  The `take` function is a method of a kind of parametric module or "object" in OOP terms.  In Elm terms, `take` is a method of an extensible record of type `Taker`.  We can create a new `Taker` object by passing the `newTaker` function some `TakerOptions`.
+It is possible to configure the `take` function's behavior.  The `take` function is a method of a kind of parametric module or "object" in OOP terms.  In Noelm terms, `take` is a method of an extensible record of type `Taker`.  We can create a new `Taker` object by passing the `newTaker` function some `TakerOptions`.
 
 We want to use the `standardTaker` from the `PositionMarking` module.  This taker is configured to accept `PositionMarked` input and produce nice error messages with line and column numbers if something goes wrong.  For convenience, we will define `t` as an aliase to this `standardTaker`:
 
@@ -58,9 +61,12 @@ Our parser should report errors when there is unexpected input.  It should also 
 #### Our main function
 
 ````
-parseUserData: String -> ParserResult Char UserData
+parseUserData: String -> FinalParserResult UserData
 parseUserData unparsed =
- parse (PM.charsToPositionMarkedChars <| String.toList unparsed ++ ['\n']) parseUserData'
+ parse
+  (  PM.charsToPositionMarkedChars
+  <| String.toList unparsed ++ ['\n'])
+  parseUserData'
 ````
 
 First we prepare our input:
@@ -75,62 +81,67 @@ Then we pass it on to a Parser:
 ````
 parseUserData': Parser (PositionMarked Char) UserData
 parseUserData' =
- t.take nameField <| \ _ _ ->
- t.take tillEndOfLineUnpadded <| \ name _ ->
+ t.take nameField <| \ _ ->
+ t.take tillEndOfLineUnpadded <| \ name ->
  fastforward 1 <|
- t.take locationField <| \ _ _ ->
- t.take tillEndOfLineUnpadded <| \ location _ ->
+ t.take locationField <| \ _ ->
+ t.take tillEndOfLineUnpadded <| \ location ->
  fastforward 1 <|
- t.take occupationField <| \ _ _ -> 
- t.take tillEndOfLineUnpadded <| \ occupation _ ->
+ t.take occupationField <| \ _ ->
+ t.take tillEndOfLineUnpadded <| \ occupation ->
  tillEndOfInput
   (Parsed
-   {name = name
-   ,location = location
-   ,occupation = occupation
-   })
+   {name=name
+   ,location=location
+   ,occupation=occupation})
   <| t.take whitespace
-  <| \ _ transition _ ->
-    ParseError ("Unexpected input "++(show transition)++" near end of file.")
+  <| \ _ ->
+   t.lookAhead 1 <| \ notWhitespace input ->
+   parseErrorAts
+    {message =
+         "Unexpected input "
+      ++ (show notWhitespace)
+      ++ " near end of file."
+    ,expected = Just "end of input"}
+    input
 ````
 
-Here we `take` things in the order that they should appear in the file.  That weird `<| \ _ _ ->` notation is just us passing a lamda which defines a Continuation.  It is similar to the syntax we see in Philip Wadler's 1992 paper ["The Essence of Functional Programming."](http://homepages.inf.ed.ac.uk/wadler/topics/monads.html).
+Here we `take` things in the order that they should appear in the file.  That weird `<| \ _ ->` notation is just us passing a lamda which defines a Continuation.  It is similar to the syntax we see in Philip Wadler's 1992 paper ["The Essence of Functional Programming."](http://homepages.inf.ed.ac.uk/wadler/topics/monads.html).
 
-PS: That paper is a good read for those who might be looking at doing monad like stuff in Elm as all of its examples are written without taking advantage of typeclasses or do-notation.  For the same reason, it is a good read for anyone just generally confused about monads.
+PS: That paper is a good read for those who might be looking at doing monad like stuff in Noelm as all of its examples are written without taking advantage of typeclasses or do-notation.  For the same reason, it is a good read for anyone just generally confused about monads.
 
 ````
-t.take foo <| \ a b ->
-t.take bar <| \ c d ->
-(\ input -> Parsed (a,c))
+t.take foo <| \ a ->
+t.take bar <| \ b ->
+(\ input -> Parsed (a,b))
 ````
 
  ===
 
 ````
-t.take foo (\ a b ->
-t.take bar (\ c d ->
-(\ input -> Parsed (a,c))))
+t.take foo (\ a ->
+t.take bar (\ b ->
+(\ input -> Parsed (a,b))))
 ````
 
  ~=
 
 ````
 do
- (a,b) <- take foo
- (c,d) <- take bar
- return (Parsed (a,c))
+ a <- take foo
+ b <- take bar
+ return (Parsed (a,b))
 ````
 
-**What are all those fastforwards for?**  We put fastforwards after takes when we want to ignore the transition between two lexemes.  In this case
- - "take tillEndOfLineUnpadded" leaves us at the transition '\n'.  We aren't interested in the newline, so we fast forward past it.
+**What are all those fastforwards for?**  We put fastforwards after takes when we want to ignore the transition between two lexemes.  In this case `take tillEndOfLineUnpadded` leaves us at the transition '\n'.  We aren't interested in the newline, so we fast forward past it.
 
 #### Our LexemeEaters
 
 I've yet to define several LexemeEaters; `nameField`,`locationField`, and `occupationField` are defined bellow as:
 
  ````
-field: String -> LexemeEater Char Char [Char]
-field name = exactMatch (String.toList name)
+field: String -> LexemeEater Char [Char]
+field name = exactStringMatch (name++":")
 nameField = field "Name"
 locationField = field "Location"
 occupationField = field "Occupation"
@@ -138,13 +149,14 @@ occupationField = field "Occupation"
 
 We still have one last LexemeEater to define and that is:
 ````
-tillEndOfLineUnpadded = lexeme (\c->c/='\n') (String.trim . String.fromList)
+tillEndOfLineUnpadded
+ = lexeme (\c->c/='\n') (String.trim . String.fromList)
 ````
 This LexemeEater is built with the `lexeme` function. The `lexeme` function takes two functions as arguments `test: char -> Bool` and `conversion: [char] -> output`.  The LexemeEater produced by `lexeme` will eat so long as `test` is positive for the current next-character.  The intermediate value that it produces is the eaten input as passed through the `conversion` function.  Our conversion function turns the input into a string and removes whitespace from either side.
 
 Finally, the `whitespace` LexemeEater used in this example is the same as the one defined near the beginning of this tutorial.  We could also use `whitespace` from the `Parsers.ContinuationParsers.Specifics.Lexemes` module.
 
-You can play with this parser bellow ([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/ParseUserDataWithoutLineNumbers.elm)):
+You can play with this parser bellow ([Source](https://github.com/timthelion/noelm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/ParseUserData.noelm)):
 |]
 
 (userDataField,userDataInput) =
