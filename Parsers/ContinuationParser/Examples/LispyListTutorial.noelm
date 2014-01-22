@@ -21,7 +21,7 @@ import Window
 
 headingText = [markdown|
 
-# The continuation parser ([download/source](https://github.com/timthelion/noelm-continuation-parser))
+# The continuation parser ([download/source](https://github.com/timthelion/noelm-continuation-parser), [docs](http://noelm-get.thobbs.cz/catalog/timthelion-noelm-continuation-parser/0.3/))
 
 |]
 
