@@ -4,7 +4,7 @@ import Parsers.ContinuationParser.Examples.LispyListParser as LispyListParser
 
 import Parsers.ContinuationParser.Examples.FieldExtras as FieldExtras
 
-parsingLispyLists = [markdown|
+parsingLispyLists = flow down [[markdown|
 ## Parsing LISP
 
 While parsing user data is good fun, I still haven't demonstrated that the `elm-continuation-parser` can be used for "real work".  Why don't we parse something more interesting. Say LISP.  I choose lisp as my test case for parsing libraries because its syntax is simple and unambiguous, yet parsing it requires most of the same features used when parsing more syntactically complex languages such as Haskell or Elm.
@@ -13,11 +13,12 @@ While our last example looked like a single block of somewhat ugly do-notation, 
 
 ### Input
 
-Take a short snippet of lisp code:
-
+Take a short snippet of lisp code
+|],[markdown|
 ````
 (hello world (this is a test) 1 2 3 4.5)
 ````
+|],[markdown|
 In the world of lisp, this is a hetrogeneous list containing 7 atoms:
 
  - 2 symbols
@@ -25,25 +26,25 @@ In the world of lisp, this is a hetrogeneous list containing 7 atoms:
  - 4 numbers
 
 The list:
-
+|],[markdown|
 ````
 ("Hello there this is a test.")
 ````
-
+|],[markdown|
 Contains just one atom, a single string.
 
 It is also important to note, that a lisp file such as
-
+|],[markdown|
 ````
 
 Hello bar baz (boo) 23
 
 ````
-
+|],[markdown|
 is invalid, becuse not all of the atoms are contained within a list.
 
 ### Our output
-
+|],[markdown|
 ````
 data LispyList
  = List [LispyList]
@@ -51,7 +52,7 @@ data LispyList
  | Number Float
  | LispyString String
 ````
-
+|],[markdown|
 ### The tasks of the LispyList parser
 
 This leaves our lispylist parser the following tasks:
@@ -69,7 +70,7 @@ This leaves our lispylist parser the following tasks:
 ### Imports
 
 The imports are much the same as with our earlier example:
-
+|],[markdown|
 ````
 import open Parsers.ContinuationParser
 import Parsers.ContinuationParser as CP
@@ -87,14 +88,14 @@ import Char
 import String
 import List
 ````
-
+|],[markdown|
 However there are two continuation-parser module's that I did not talk about previously:
-
+|],[markdown|
 ````
 import open Parsers.ContinuationParser.Specifics.ContinuationParsers
 import open Parsers.CharacterClassification
 ````
-
+|],[markdown|
 The `ContinuationParsers` module is intended to provide generic `ContinuationParser`s.  As of this writing it includes only one and that is the `takeString` parser.  This takes a quoted string, dealing with standard backslashed escape sequences.
 
 The `CharsetClassification` module provides functions like `isWhitespace` and `isLetter` that didn't make their way into the standard `Char` library.
@@ -109,7 +110,7 @@ t = standardTaker
 
 ### Our main function
 Our main function looks much like the main function in the previous example.
-
+|],[markdown|
 ````
 parseLispyListFile: String ->  FinalParserResult.FinalParserResult [LispyList]
 parseLispyListFile input
@@ -118,13 +119,13 @@ parseLispyListFile input
     (parseTopLevelLispyLists [])
 
 ````
-
+|],[markdown|
 The only interesting thing here, is that we are passing an empty accumulator to `parseTopLevelLispyLists`.
 
 **Our next function** is much more interesting.
 
 In `parsec`'s terms, this function would probably be something along the lines of:
-
+|],[markdown|
 ````
 do
  lispyLists <- many  $ do { _ <- whitespaceAndComments; lispyList}
@@ -132,9 +133,9 @@ do
  eof
  return lispyLists
 ````
-
+|],[markdown|
 Rather than using monadic carying of state like in parsec, with the continuation parser we use recursion:
-
+|],[markdown|
 ````
 parseTopLevelLispyLists:
     [LispyList]
@@ -147,7 +148,7 @@ parseTopLevelLispyLists acc =
     (takeLispyList
          <| \ list -> parseTopLevelLispyLists (acc++[list])))
 ````
-
+|],[markdown|
 In this excerpt we take some `whitespace` and stop at the first non-whitespace character in our input to the name transition.  We then make a choice:
 
  - If the next thing in the input is a semicolon ';', the `comment` lexeme tells <|> that it can `Continue` unambiguously.  The comment lexeme reads its given marker and then reads till the end of the line.  We then ignore any intermediate value that the `comment` lexeme created(the comment's text) and go on to run `parseTopLevelLists` on the remainder of the input.  If our file consisted mearly of comments and whitespace then we would continue looping like this untill the end of the input.
@@ -161,7 +162,7 @@ When we take `whitespace` or a `comment` it is possible, that rather than the Le
 The `markEndOfInputAsErrorAt` function takes a ContinuationParser and an error message and returns a ContinuationParser which evaluates to the error message(with appropriate line numbers) if the end of input is reached before the continuation is reached.  In this case, if the end of input is reached before the lispylist has finished being taken, a close paren error is displayed.
 
 **The `takeLispyList` function** is the workhorse of our parser:
-
+|],[markdown|
 ````
 takeLispyList: ContinuationParser (PositionMarked Char) LispyList [LispyList]
 takeLispyList continuation =
@@ -188,20 +189,20 @@ takeLispyList' acc continuation =
    <|> (t.take lispySymbol
        <| \ symbol -> takeLispyList' (acc++[Symbol symbol]) continuation))
 ````
-
+|],[markdown|
 There is surprisingly little new here. The only thing of note in this function is the seccond to last case: `t.disambiguate Char.isDigit`.
 
  - `t.disambiguate` disambiguates in the old parsec LL(1) fassion on the basis of a single character.  Why do we use it here?  Certainly `t.take float` is enough.  Indeed it is, but we want to provide our user with nice error messages.  If they type in "( 1. hello)" we don't want to list for them all the different things <|> tried.  We simply want to tell them that parsing the number failed.
-
+|],[markdown|
 ````
 lispySymbol: LexemeEater Char String
 lispySymbol = LE.expect "name or other symbol" <|
  symbol
   (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c || c == '\"' || c == ';')
 ````
-
+|],[markdown|
 You can try out our new LispyList parser bellow ([Source](https://github.com/timthelion/elm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/LispyListParser.noelm)):
-|]
+|]]
 
 (lispyListParserField,lispyListParserInput) =
  FieldExtras.fieldMultilineWithDefaultText

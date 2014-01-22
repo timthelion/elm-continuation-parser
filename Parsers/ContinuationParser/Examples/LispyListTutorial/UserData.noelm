@@ -4,7 +4,7 @@ import Parsers.ContinuationParser.Examples.ParseUserData as ParseUserData
 
 import Parsers.ContinuationParser.Examples.FieldExtras as FieldExtras
 
-userData = [markdown|
+userData = flow down [[markdown|
 # Our first parser
 
 Say we have the String:
@@ -35,6 +35,8 @@ type UserData =
 #### Basic imports
 
 We'll start by importing some modules from the continuation-parser library:
+|]
+ ,[markdown|
 
 ````
 import open Parsers.ContinuationParser
@@ -43,6 +45,8 @@ import open Parsers.CharacterClassification -- (isWhitespace)
 
 import String
 ````
+|]
+ ,[markdown|
 The ContinuationParser module provides the basic functions and data types that we'll need to do our parsing.  The LexemeEaters module provides basic functions for constructing new LexemeEaters. We also import String, because our parser will work with lists of characters rather than Noelm Strings and so we'll need to convert between the two.
 
 #### Preperatory boiler-plate
@@ -59,6 +63,8 @@ t = standardTaker
 Our parser should report errors when there is unexpected input.  It should also report an error if it reaches the end of the file before it is done reading in the Name Location and Occupation that it was looking for.  One special case is that the line in which the occupation is listed does not necessarily need to end with a newline.  There could be an end of input there instead.  This can be easilly worked around in several ways.  We could provide a special case for dealing with the last entry. I think it is more elegant simply to append an extra newline to the end of the input.
 
 #### Our main function
+|]
+ ,[markdown|
 
 ````
 parseUserData: String -> FinalParserResult UserData
@@ -68,7 +74,8 @@ parseUserData unparsed =
   <| String.toList unparsed ++ ['\n'])
   parseUserData'
 ````
-
+|]
+ ,[markdown|
 First we prepare our input:
 
  - Convert it from a String to a [Char]
@@ -78,6 +85,9 @@ First we prepare our input:
 Then we pass it on to a Parser:
 
 #### Our Parser
+|]
+ ,[markdown|
+
 ````
 parseUserData': Parser (PositionMarked Char) UserData
 parseUserData' =
@@ -106,6 +116,8 @@ parseUserData' =
     input
 ````
 
+|]
+ ,[markdown|
 Here we `take` things in the order that they should appear in the file.  That weird `<| \ _ ->` notation is just us passing a lamda which defines a Continuation.  It is similar to the syntax we see in Philip Wadler's 1992 paper ["The Essence of Functional Programming."](http://homepages.inf.ed.ac.uk/wadler/topics/monads.html).
 
 PS: That paper is a good read for those who might be looking at doing monad like stuff in Noelm as all of its examples are written without taking advantage of typeclasses or do-notation.  For the same reason, it is a good read for anyone just generally confused about monads.
@@ -138,6 +150,8 @@ do
 #### Our LexemeEaters
 
 I've yet to define several LexemeEaters; `nameField`,`locationField`, and `occupationField` are defined bellow as:
+|]
+ ,[markdown|
 
 ````
 field: String -> LexemeEater Char [Char]
@@ -146,18 +160,26 @@ nameField = field "Name"
 locationField = field "Location"
 occupationField = field "Occupation"
 ````
+|]
+ ,[markdown|
 
 We still have one last LexemeEater to define and that is:
+|]
+ ,[markdown|
+
 ````
 tillEndOfLineUnpadded
  = lexeme (\c->c/='\n') (String.trim . String.fromList)
 ````
+|]
+ ,[markdown|
+
 This LexemeEater is built with the `lexeme` function. The `lexeme` function takes two functions as arguments `test: char -> Bool` and `conversion: [char] -> output`.  The LexemeEater produced by `lexeme` will eat so long as `test` is positive for the current next-character.  The intermediate value that it produces is the eaten input as passed through the `conversion` function.  Our conversion function turns the input into a string and removes whitespace from either side.
 
 Finally, the `whitespace` LexemeEater used in this example is the same as the one defined near the beginning of this tutorial.  We could also use `whitespace` from the `Parsers.ContinuationParsers.Specifics.Lexemes` module.
 
 You can play with this parser bellow ([Source](https://github.com/timthelion/noelm-continuation-parser/blob/master/src/Parsers/ContinuationParser/Examples/ParseUserData.noelm)):
-|]
+|]]
 
 (userDataField,userDataInput) =
  FieldExtras.fieldMultilineWithDefaultText
