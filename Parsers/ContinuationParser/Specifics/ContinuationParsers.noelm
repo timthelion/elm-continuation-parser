@@ -25,6 +25,11 @@ import open Parsers.ContinuationParser.Specifics.Lexemes
 
 t = standardTaker
 
+{-|
+Take a C style double quoted backslash escaped string.
+
+Note: Suports only basic escape sequences.  No support for JSON style unicode escaping.
+-}
 takeString: ContinuationParser (PositionMarked Char) String output
 takeString continuation =
  t.take (LE.expect "string" <| exactMatch ['\"']) <| \ _ ->
@@ -40,7 +45,13 @@ takeString' acc continuation =
   (t.take (exactMatch ['\"']) <| \ _ ->
   continuation (String.fromList <| acc ++ segment)))
 
-{-| Eats a C style escaped character.  Aka "\n" becomes newline -}
+{-|
+
+Eats a C style escaped character.  Aka "\n" becomes newline
+
+Note: Suports only basic escape sequences.  No support for JSON style unicode escaping.
+
+-}
 escapedChar: ContinuationParser (PositionMarked Char) Char output
 escapedChar continuation =
  t.take (exactMatch ['\\']) <| \ _ ->

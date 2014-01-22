@@ -8,10 +8,10 @@ This module provides the ability to turn a function of type `a->b` into a lazy t
 -}
 
 {-| A lazy thunk -}
-type Lazy input output = (input->output,input)
+type Lazy input output = (input -> output,input)
 
 {-| Create a lazy thunk from a function and its input -}
-computeLater: (input->output) -> input -> Lazy input output
+computeLater: (input -> output) -> input -> Lazy input output
 computeLater f input = (f,input)
 
 {-| Evaluate a thunk producing its value -}

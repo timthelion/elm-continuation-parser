@@ -6,7 +6,7 @@ module Parsers.ContinuationParser where
 This module provides functions which operate on Parsers and ContinuationParsers(to be found int the Parsers.ContinuationParser.Types module).
 
 # Fundimentals
-@docs parse, <|>, fmap, return
+@docs parse, (<|>), fmap, return
 
 # Seeking
 @docs fastforward
@@ -54,9 +54,13 @@ It is a little bit more flexible than parsec's <|>.
 Whereas in parsec <|> is LL(1) by default in the elm continuation parser it is LL(k).  The elm continuation parser is satisfied that the choice is not ambiguous when a parser returns Continue.
 
 Notes:
+
  - take returns Continue at the end of each lexeme by default, so the choice operator is satisfied after a lexeme is eaten.
+
  - You can do something similar to `try` by using evaluateContinuesTillEndOfBlock along with markAsEndOfBlock to prevent <|> from believing that the choice is unambiguous.
+
  - If you want this combinator to provide human readable error messages must ensure that all parsers you are choosing from have been labled with the `expect` function.  Many of the built-in Parsers and LexemeEaters are pre-labled.
+
 -}
 (<|>) : Parser input output-> Parser input output -> Parser input output
 (<|>) p1 p2 input =

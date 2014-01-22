@@ -151,6 +151,10 @@ convertOutputMaybe conversion eater acc input =
   LexemeError err -> LexemeError err
   IncompleteLexeme expectation -> IncompleteLexeme expectation
 
+{-|
+Convert the input to a `LexemeEater`.  Used by `take`, for example, to allow `LexemeEater`s which accept `Char`s to accept `(PositionMarked Char)`s.
+
+-}
 convertInput: (input -> convertedInput) -> LexemeEater convertedInput output -> LexemeEater input output
 convertInput convert lexemeEater acc input' =
    let
@@ -162,6 +166,13 @@ convertInput convert lexemeEater acc input' =
    in
    lexemeEater convertedAcc convertedInput
 
+{-|
+Modify any errors produced by the lexeme eater with an anotation function.  This function takes:
+
+ - The error that was origionally produced: Error
+ - The input that was consumed so far: [char]
+ - The next item in the input: Maybe char
+-}
 anotateError: (Error -> [char] -> Maybe char -> Error) -> LexemeEater char output -> LexemeEater char output
 anotateError anotate lexemeEater acc input =
    case lexemeEater acc input of
@@ -169,6 +180,11 @@ anotateError anotate lexemeEater acc input =
     EatenLexeme lexeme -> EatenLexeme lexeme
     IncompleteLexeme expectation -> IncompleteLexeme expectation
 
+{-|
+
+Set the return value of the `LexemeEater` in the case that it eats nothing.  Good for choosing whether to "accept" this as a valid lexeme or give an error.  To be used with `charset` and friends.
+
+-}
 whenNothingWasEaten: EatenLexeme output -> LexemeEater input output -> LexemeEater input output
 whenNothingWasEaten nothingEaten lexemeEater acc input =
  case lexemeEater acc input of
@@ -178,12 +194,22 @@ whenNothingWasEaten nothingEaten lexemeEater acc input =
    if | length acc > 0 -> EatenLexeme lexeme
       | otherwise -> nothingEaten
 
+{-|
+
+If the `LexemeEater` reaches the end of input before it finishes, return the given EatenLexeme instead of an EndOfInputBeforeResultReached.
+
+-}
 catchEndOfInput: EatenLexeme output -> LexemeEater input output -> LexemeEater input output
 catchEndOfInput reaction lexemEater acc input =
  case input of
   Just _ -> lexemEater acc input
   Nothing -> reaction
 
+{-|
+
+Give the lexeme a human readable name to improve error messages.
+
+-}
 expect: String -> LexemeEater input output -> LexemeEater input output
 expect name lexemeEater acc input =
  case lexemeEater acc input of
