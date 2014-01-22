@@ -139,7 +139,7 @@ do
 
 I've yet to define several LexemeEaters; `nameField`,`locationField`, and `occupationField` are defined bellow as:
 
- ````
+````
 field: String -> LexemeEater Char [Char]
 field name = exactStringMatch (name++":")
 nameField = field "Name"

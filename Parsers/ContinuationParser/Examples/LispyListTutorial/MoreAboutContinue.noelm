@@ -68,21 +68,29 @@ parseFooBlocked': Parser (PositionMarked Char) Foo
 parseFooBlocked' =
  (\i->evaluateContinuesTillEndOfBlock 
   ((t.take (exactStringMatch "Foo") <|\_->
-   t.take (exactStringMatch "Bar") <| markAsEndOfBlock <|\_-> return <| Parsed Bar) i))
+   t.take (exactStringMatch "Bar") <|
+   markAsEndOfBlock <|\_-> return <| Parsed Bar) i))
         <|>
- (\i->evaluateContinuesTillEndOfBlock -- Not strictly needed, but will produce nicer errors.
+ (\i->evaluateContinuesTillEndOfBlock
+   -- Doing the second block is strictly needed,
+   -- but will produce nicer errors.
   ((t.take (exactStringMatch "Foo") <|\_->
-   t.take (exactStringMatch "Baz") <| markAsEndOfBlock <|\_-> return <| Parsed Baz) i))
+   t.take (exactStringMatch "Baz") <|
+   markAsEndOfBlock <|\_-> return <| Parsed Baz) i))
 ````
 
 Blocks are used in a few different places.  One you already know is `markEndOfInputAsErrorAt` which wraps the `replaceEndOfInputWith` function:
 
 ````
-replaceEndOfInputWith: ContinuationParser input intermediate output -> ParserResult input output -> ContinuationParser input intermediate output
+replaceEndOfInputWith: ContinuationParser input intermediate output
+                    -> ParserResult input output
+                    -> ContinuationParser input intermediate output
 replaceEndOfInputWith continuationParser result continuation input =
- case evaluateContinuesTillEndOfBlock <| continuationParser (markAsEndOfBlock continuation) input of
+ case evaluateContinuesTillEndOfBlock <|
+      continuationParser (markAsEndOfBlock continuation) input of
   EndOfInputBeforeResultReached _ -> result
-  Continue value -> Lazzy.evaluate value.continuation -- Evaluate end of block marker
+  Continue value -> Lazzy.evaluate value.continuation
+                    -- ^ Evaluate end of block marker
   otherCases -> otherCases
 ````
 
