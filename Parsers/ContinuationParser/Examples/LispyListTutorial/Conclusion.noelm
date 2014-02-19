@@ -1,7 +1,0 @@
-module Parsers.ContinuationParser.Examples.LispyListTutorial.Conclusion where
-
-conclusion = [markdown|
-# Conclusion - Larger projects using this parsing library
-
-I would like to bring your attention to the reason I wrote the noelm-continuation-parser in the first place.  I am working on a visual programming language called [graphical-noelm](http://www.thobbs.cz/works/2013/graphical-noelm/Intro.html).  It produces Noelm files which function both as compiled output and as saved data.  While I sufficed with just split, fold and map I felt that the parsing code would look nicer, be more maintainable and produce nicer output if it was written with some sort of parsing library.  None existing in Noelm yet, I wrote my own.  You can see the source code to graphical-noelm's parser [here](https://github.com/timthelion/graphical-noelm/tree/master/src/ParserAndCompiler).
-|]
