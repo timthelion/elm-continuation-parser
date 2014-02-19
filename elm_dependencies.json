@@ -1,10 +1,9 @@
-{ "version": "0.3"
-, "noelm-version": "0.10.0.2"
+{ "version": "0.4444"
 , "dependencies": {}
-, "summary": "Parser library for Noelm"
+, "summary": "Parser library for Elm"
 , "description": "A powerful parsing library for writing parsers in continuation passing style. For a longer description see: http://thobbs.cz/works/2014/noelm-continuation-parser/LispyListTutorial.html"
 , "license": "LGPLv3"
-, "repository": "https://github.com/timthelion/noelm-continuation-parser.git"
+, "repository": "https://github.com/timthelion/elm-continuation-parser.git"
 , "exposed-modules":
     [ "Lazzy"
     , "Parsers.CharacterClassification"
