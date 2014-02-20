@@ -14,17 +14,17 @@ import String
 import Char
 
 {- Internal modules -}
-import open Parsers.CharacterClassification
-import open Parsers.ContinuationParser
-import open Parsers.ContinuationParser.LexemeEaters
+import Parsers.CharacterClassification (..)
+import Parsers.ContinuationParser (..)
+import Parsers.ContinuationParser.LexemeEaters (..)
 import Parsers.ContinuationParser.LexemeEaters as LE
-import open Parsers.ContinuationParser.Take
+import Parsers.ContinuationParser.Take (..)
 
 {-| Eats any kind of whitespace. -}
 whitespace: LexemeEater  Char [Char]
 whitespace = LE.expect "whitespace" <| charset isWhitespace
 
-{-| Eats untill it gets to a newline -}
+{-| Eats until it gets to a newline -}
 tillEndOfLine: LexemeEater Char [Char]
 tillEndOfLine = charset (\c->c/='\n')
 

@@ -3,21 +3,21 @@ Copyright information can be found at the end of this file.
 -}
 module Parsers.ContinuationParser.LexemeEaters where
 {-|
-This module provides generic functions for building and modifying LexemEaters.
+This module provides generic functions for building and modifying LexemeEaters.
 
 #Types of lexemes
-@docs charset, keyword, lexeme, lexemeMaybe, symbol, untill, untillMarker, exactMatch, exactStringMatch, endOfInput
+@docs charset, keyword, lexeme, lexemeMaybe, symbol, until, untilMarker, exactMatch, exactStringMatch, endOfInput
 
 #Modifying LexemeEaters
 @docs convertOutput, convertOutputMaybe, convertInput
 ## Exceptions
-@docs anotateError, whenNothingWasEaten, catchEndOfInput, expect
+@docs annotateError, whenNothingWasEaten, catchEndOfInput, expect
 -}
 
-import open Parsers.ContinuationParser.Take
-import open Parsers.ContinuationParser.Types
+import Parsers.ContinuationParser.Take (..)
+import Parsers.ContinuationParser.Types (..)
 import String
-import open List.CPSExtras
+import List.CPSExtras (..)
 
 {- types of lexeme -}
 {-| Eat anything that passes the test.
@@ -79,7 +79,7 @@ lexemeMaybe test conversion
 
 {-|
 
-This eats untill it reaches punctuation of your choice.  It then converts what it's eaten to a String.
+This eats until it reaches punctuation of your choice.  It then converts what it's eaten to a String.
 
 Based on the lexeme function.
  -}
@@ -87,16 +87,16 @@ symbol: (Char -> Bool) -> LexemeEater Char String
 symbol punctuationTest = symbol' punctuationTest
 symbol' punctuationTest = lexeme (not . punctuationTest) String.fromList
 
-{-| Eat untill the condition is met.  The condition takes the currently consumed input and returns a Bool. -}
-untill: ([char]->Bool) -> LexemeEater char [char]
-untill test acc input =
+{-| Eat until the condition is met.  The condition takes the currently consumed input and returns a Bool. -}
+until: ([char]->Bool) -> LexemeEater char [char]
+until test acc input =
  if | test acc  -> EatenLexeme acc
     | otherwise -> IncompleteLexeme Nothing
 
-{-| Eat untill the given marker(list segment) is reached, then return the eaten contents except for the segment. -}
-untillMarker: [char] -> LexemeEater char [char]
-untillMarker marker acc input =
- case untill (\acc -> isSuffixOf marker acc) acc input of
+{-| Eat until the given marker(list segment) is reached, then return the eaten contents except for the segment. -}
+untilMarker: [char] -> LexemeEater char [char]
+untilMarker marker acc input =
+ case until (\acc -> isSuffixOf marker acc) acc input of
   EatenLexeme le -> EatenLexeme <| take (length le - length marker) le
   IncompleteLexeme expectation -> IncompleteLexeme expectation
  
@@ -173,8 +173,8 @@ Modify any errors produced by the lexeme eater with an anotation function.  This
  - The input that was consumed so far: [char]
  - The next item in the input: Maybe char
 -}
-anotateError: (Error -> [char] -> Maybe char -> Error) -> LexemeEater char output -> LexemeEater char output
-anotateError anotate lexemeEater acc input =
+annotateError: (Error -> [char] -> Maybe char -> Error) -> LexemeEater char output -> LexemeEater char output
+annotateError anotate lexemeEater acc input =
    case lexemeEater acc input of
     LexemeError err -> LexemeError <| anotate err acc input
     EatenLexeme lexeme -> EatenLexeme lexeme

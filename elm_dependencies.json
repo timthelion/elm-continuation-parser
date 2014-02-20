@@ -1,16 +1,20 @@
-{ "version": "0.4444"
-, "dependencies": {}
+{ "version": "0.4.1"
 , "summary": "Parser library for Elm"
-, "description": "A powerful parsing library for writing parsers in continuation passing style. For a longer description see: http://thobbs.cz/works/2014/noelm-continuation-parser/LispyListTutorial.html"
+, "description":
+      "A powerful parsing library for writing parsers in continuation passing style. For a longer description see: http://thobbs.cz/works/2014/noelm-continuation-parser/LispyListTutorial.html"
 , "license": "LGPLv3"
-, "repository": "https://github.com/timthelion/elm-continuation-parser.git"
+, "repository":
+      "https://github.com/timthelion/elm-continuation-parser.git"
 , "exposed-modules":
-    [ "Lazzy"
-    , "Parsers.CharacterClassification"
-    , "Parsers.ContinuationParser"
-    , "Parsers.ContinuationParser.LexemeEaters"
-    , "Parsers.ContinuationParser.PositionMarking"
-    , "Parsers.ContinuationParser.Specifics.Lexemes"
-    , "Parsers.ContinuationParser.Specifics.ContinuationParsers"
-    ]
+      [ "Lazzy"
+      , "Parsers.CharacterClassification"
+      , "Parsers.ContinuationParser"
+      , "Parsers.ContinuationParser.FinalParserResult"
+      , "Parsers.ContinuationParser.LexemeEaters"
+      , "Parsers.ContinuationParser.PositionMarking"
+      , "Parsers.ContinuationParser.Specifics.Lexemes"
+      , "Parsers.ContinuationParser.Specifics.ContinuationParsers"
+      ]
+, "elm-version": "0.11"
+, "dependencies": {}
 }

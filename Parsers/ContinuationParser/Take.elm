@@ -19,8 +19,8 @@ The Taker object contains the following functions:
 -}
 
 {- internal module imports -}
-import open Parsers.ContinuationParser
-import open Parsers.ContinuationParser.Types
+import Parsers.ContinuationParser (..)
+import Parsers.ContinuationParser.Types (..)
 
 
 {- Lexemes -}

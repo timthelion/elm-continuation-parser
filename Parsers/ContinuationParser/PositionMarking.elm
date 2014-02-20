@@ -20,10 +20,10 @@ This file provides the basic functionality for generating error messages with li
 @docs parseErrorAts, parseErrorAt, markEndOfInputAsErrorAt, errorAts, errorAt
 
 -}
-import open Parsers.ContinuationParser
-import open Parsers.ContinuationParser.Types
-import open Parsers.ContinuationParser.Take
-import open Parsers.ContinuationParser.LexemeEaters
+import Parsers.ContinuationParser (..)
+import Parsers.ContinuationParser.Types (..)
+import Parsers.ContinuationParser.Take (..)
+import Parsers.ContinuationParser.LexemeEaters (..)
 
 {- types -}
 type PositionMarked char =
@@ -65,7 +65,7 @@ Take a `LexemeEater` which has no knowlege of position marking and make it accep
 -}
 handlePositionMarkedInput: LexemeEater char output -> LexemeEater (PositionMarked char) output
 handlePositionMarkedInput
- = anotateError (\err acc input -> errorAtM err input)
+ = annotateError (\err acc input -> errorAtM err input)
  . convertInput (\i->i.char)
 
 {- error messages -}

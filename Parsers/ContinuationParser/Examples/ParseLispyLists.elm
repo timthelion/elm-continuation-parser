@@ -7,16 +7,16 @@ Copyright information can be found in the COPYING file or at the end of this fil
 -}
 
 module Parsers.ContinuationParser.Examples.LispyListParser where
-import open Parsers.ContinuationParser
+import Parsers.ContinuationParser (..)
 import Parsers.ContinuationParser as CP
-import open Parsers.ContinuationParser.Types
-import open Parsers.ContinuationParser.Take
-import open Parsers.ContinuationParser.PositionMarking
-import open Parsers.ContinuationParser.LexemeEaters
+import Parsers.ContinuationParser.Types (..)
+import Parsers.ContinuationParser.Take (..)
+import Parsers.ContinuationParser.PositionMarking (..)
+import Parsers.ContinuationParser.LexemeEaters (..)
 import Parsers.ContinuationParser.LexemeEaters as LE
-import open Parsers.ContinuationParser.Specifics.Lexemes
-import open Parsers.ContinuationParser.Specifics.ContinuationParsers
-import open Parsers.CharacterClassification
+import Parsers.ContinuationParser.Specifics.Lexemes (..)
+import Parsers.ContinuationParser.Specifics.ContinuationParsers (..)
+import Parsers.CharacterClassification (..)
 import Parsers.ContinuationParser.FinalParserResult as FinalParserResult
 
 import Char
@@ -76,6 +76,10 @@ lispySymbol = LE.expect "name or other symbol" <|
  symbol
   (\c->isWhitespace c || c == ')' || c == '(' || Char.isDigit c || c == '\"' || c == ';')
 
+testString : String
+testString = """(hello (this is a test (2.0)))"""
+
+main = flow down [plainText testString,asText <| parseLispyListFile testString]
 
 {-
 The continuation parser

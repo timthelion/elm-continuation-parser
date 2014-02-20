@@ -24,7 +24,7 @@ import Either
 {- internal modules -}
 import Lazzy
 import Parsers.ContinuationParser.FinalParserResult as FinalParserResult
-import open Parsers.ContinuationParser.Types
+import Parsers.ContinuationParser.Types (..)
 
 {- basic functions -}
 {-| This function should be run on any `Parser` from which you would like to create a usable result.  Think of running a parser with the `parse` function line running a monad.
@@ -193,7 +193,7 @@ evaluateContinues result =
  Trampoline.trampoline <| makeTrampoline result
   
 
-{-| Evaluate all Continues untill an EndOfBlock is reached. Then return it, unevaluated. -}
+{-| Evaluate all Continues until an EndOfBlock is reached. Then return it, unevaluated. -}
 evaluateContinuesTillEndOfBlock: ParserResult input output -> ParserResult input output
 evaluateContinuesTillEndOfBlock result =
  let

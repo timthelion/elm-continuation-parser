@@ -14,14 +14,14 @@ This module provides generally usefull ContinuationParsers
 import String
 
 {- Internal modules -}
-import open Parsers.CharacterClassification
-import open Parsers.ContinuationParser
-import open Parsers.ContinuationParser.Types
-import open Parsers.ContinuationParser.Take
-import open Parsers.ContinuationParser.LexemeEaters
+import Parsers.CharacterClassification (..)
+import Parsers.ContinuationParser (..)
+import Parsers.ContinuationParser.Types (..)
+import Parsers.ContinuationParser.Take (..)
+import Parsers.ContinuationParser.LexemeEaters (..)
 import Parsers.ContinuationParser.LexemeEaters as LE
-import open Parsers.ContinuationParser.PositionMarking
-import open Parsers.ContinuationParser.Specifics.Lexemes
+import Parsers.ContinuationParser.PositionMarking (..)
+import Parsers.ContinuationParser.Specifics.Lexemes (..)
 
 t = standardTaker
 
@@ -65,7 +65,7 @@ comment marker continuation =
 
 {-|
 
-This eats untill it reaches a quotation mark or a backslash.  AKA, it eats the easilly digestible parts of a string.
+This eats until it reaches a quotation mark or a backslash.  AKA, it eats the easilly digestible parts of a string.
 
 -}
 normalStringSegment: LexemeEater Char [Char]
